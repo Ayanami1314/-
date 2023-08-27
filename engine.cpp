@@ -2,43 +2,52 @@
 #include <iomanip>
 #include <cassert>
 #include <queue>
+#include <memory>
 #include <cstring>
 #include "engine.h"
 #include "units.h"
 #include <iomanip>
 using namespace std;
 
-void GameLogic(string line, Field* f, bool side) {
-    // ÃðµôÉÏ»ØºÏµÄ»ð
-    for(int i=0; i<f->getWidth(); i++){
-        for(int j=0; j<f->getHeight(); j++){
-            if(f->getTerrain(i, j) == ONFIRE){
+void GameLogic(string line, Field *f, bool side)
+{
+    // ï¿½ï¿½ï¿½ï¿½Ï»ØºÏµÄ»ï¿½
+    for (int i = 0; i < f->getWidth(); i++)
+    {
+        for (int j = 0; j < f->getHeight(); j++)
+        {
+            if (f->getTerrain(i, j) == ONFIRE)
+            {
                 f->setTerrain(i, j, PLAIN);
             }
         }
     }
-    // ÒÆ¶¯ºÍ¹¥»÷
-    int r=0, c=0, d=0;
-    int final_r=0, final_c=0;
-    int energy = 0; // ÐÐ¶¯Á¦
-//    string line;
-//    if(!std::getline(is, line)){
-//        return;
-//    }
+    // ï¿½Æ¶ï¿½ï¿½Í¹ï¿½ï¿½ï¿½
+    int r = 0, c = 0, d = 0;
+    int final_r = 0, final_c = 0;
+    int energy = 0; // ï¿½Ð¶ï¿½ï¿½ï¿½
+                    //    string line;
+                    //    if(!std::getline(is, line)){
+                    //        return;
+                    //    }
     vector<int> op;
-    for(int i=0; i<line.length(); i++){
+    for (int i = 0; i < line.length(); i++)
+    {
         char ch = line.at(i);
-        if(isblank(ch)){
+        if (isblank(ch))
+        {
             continue;
         }
-        if(ch == '1' && i < line.length() - 1 &&  line.at(i+1) == '0'){
+        if (ch == '1' && i < line.length() - 1 && line.at(i + 1) == '0')
+        {
             op.push_back(10);
             i++;
             continue;
         }
         op.push_back(ch - '0');
     }
-    if(op.empty()){
+    if (op.empty())
+    {
         return;
     }
     int idx = 0;
@@ -46,52 +55,78 @@ void GameLogic(string line, Field* f, bool side) {
     idx++;
     c = op.at(idx);
     idx++;
-    if(f->getUnit(r, c) == nullptr || f->getUnit(r, c)->getType() == UNDEFINED){
+    if (f->getUnit(r, c) == nullptr || f->getUnit(r, c)->getType() == UNDEFINED)
+    {
         cout << "There is no chess in this position" << endl;
         return;
     }
-    if(side != f->getUnit(r, c)->getSide()){
+    if (side != f->getUnit(r, c)->getSide())
+    {
         cout << "You can only move your chess" << endl;
         return;
     }
     final_r = r, final_c = c;
-    int dx, dy; // d=123456789£¬dx = -1, 0, 1 = (d-1)/3-1; dy = (d-1)%3 - 1, x == row, y == col
+    int dx, dy; // d=123456789ï¿½ï¿½dx = -1, 0, 1 = (d-1)/3-1; dy = (d-1)%3 - 1, x == row, y == col
 
     UnitType t = f->getUnit(r, c)->getType();
-    switch(t){
-        case FOOTMAN:energy = 4; break;
-        case KNIGHT:energy = 5; break;
-        case ARCHER:energy = 3; break;
-        case MAGE:energy = 2; break;
-        case UNDEFINED: break;
+    switch (t)
+    {
+    case FOOTMAN:
+        energy = 4;
+        break;
+    case KNIGHT:
+        energy = 5;
+        break;
+    case ARCHER:
+        energy = 3;
+        break;
+    case MAGE:
+        energy = 2;
+        break;
+    case UNDEFINED:
+        break;
     }
     while (energy > 0)
     {
-        if(idx >= op.size()){
+        if (idx >= op.size())
+        {
             break;
         }
         d = op.at(idx);
-        if(d == 0 || d > 9){
+        if (d == 0 || d > 9)
+        {
             break;
         }
-        if(d == 5) {
+        if (d == 5)
+        {
             continue;
         }
         idx++;
         dx = (d - 1) / 3 - 1;
         dy = (d - 1) % 3 - 1;
-        if(!f->inBounds(r + dx, c + dy)){
+        if (!f->inBounds(r + dx, c + dy))
+        {
             break;
         }
         Terrain newplace = f->getTerrain(r + dx, c + dy);
         int cost = 0;
         switch (newplace)
         {
-            case PLAIN: cost = 1; break;
-            case FOREST: cost = 2; break;
-            case WATER: cost = 999; break;
-            case MOUNTAIN:cost = 999; break;
-            case ABYSS:cost = 999; break;
+        case PLAIN:
+            cost = 1;
+            break;
+        case FOREST:
+            cost = 2;
+            break;
+        case WATER:
+            cost = 999;
+            break;
+        case MOUNTAIN:
+            cost = 999;
+            break;
+        case ABYSS:
+            cost = 999;
+            break;
         }
         if (energy >= cost && f->inBounds(r + dx, c + dy))
         {
@@ -101,58 +136,67 @@ void GameLogic(string line, Field* f, bool side) {
             c += dy;
         }
     }
-    if(idx < op.size()){
-        d = op.at(idx); // ±ÜÃâenergy=0³öÀ´Ã»¸üÐÂd
+    if (idx < op.size())
+    {
+        d = op.at(idx); // ï¿½ï¿½ï¿½ï¿½energy=0ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½d
     }
 
     final_r = r;
     final_c = c;
     if (d == 0)
     {
-        // ¹¥»÷Âß¼­
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½
         idx++;
-        d = op.at(idx);// ·½Ïò
+        d = op.at(idx); // ï¿½ï¿½ï¿½ï¿½
         dx = (d - 1) / 3 - 1;
         dy = (d - 1) % 3 - 1;
-        if(t != ARCHER && t != MAGE){
-            // ¹¥»÷ÁÙ½üÒ»¸ñ
+        if (t != ARCHER && t != MAGE)
+        {
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Ù½ï¿½Ò»ï¿½ï¿½
             f->getUnit(final_r + dx, final_c + dy)->setType(UNDEFINED);
         }
-        else if(f->getTerrain(final_r + dx, final_c + dy) != MOUNTAIN){
-            // ARCHER¹¥»÷¸ôÒ»¸ñ£¬Èç¹ûÃ»ÓÐ¸ßÉ½Ôò¿ÉÒÔ¹¥»÷
-            f->getUnit(final_r + 2*dx, final_c + 2*dy)->setType(UNDEFINED);
+        else if (f->getTerrain(final_r + dx, final_c + dy) != MOUNTAIN)
+        {
+            // ARCHERï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð¸ï¿½É½ï¿½ï¿½ï¿½ï¿½Ô¹ï¿½ï¿½ï¿½
+            f->getUnit(final_r + 2 * dx, final_c + 2 * dy)->setType(UNDEFINED);
         }
-        else {
-            cout << "Illegal input!The units is " <<t<<"but you input 0" << endl;
+        else
+        {
+            cout << "Illegal input!The units is " << t << "but you input 0" << endl;
         }
     }
-    else if(d == 10){
-        // ·¨Ê¦, 10 D S
+    else if (d == 10)
+    {
+        // ï¿½ï¿½Ê¦, 10 D S
         idx++;
         d = op.at(idx);
         idx++;
-        int s = op.at(idx);//s=1£¬»ðÇòÊõ£»s=2£¬µØÕð
-        switch(s){
-            case 1:{
-                // ´Ë´¦»ðÇòÊõµÄÊµÏÖÊÇË²Ê±µÄ£¬ºóÃæÐ´UIµÄÊ±ºòÒª¸Ä
-                createFireBall(f, final_r, final_c, d);
-                break;
-            }
-            case 2:{
-                createEarthquake(f, final_r, final_c, d);
-            }
-            default:
-                break;
+        int s = op.at(idx); // s=1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½s=2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        switch (s)
+        {
+        case 1:
+        {
+            // ï¿½Ë´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½Ë²Ê±ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Ð´UIï¿½ï¿½Ê±ï¿½ï¿½Òªï¿½ï¿½
+            createFireBall(f, final_r, final_c, d);
+            break;
+        }
+        case 2:
+        {
+            createEarthquake(f, final_r, final_c, d);
+        }
+        default:
+            break;
         }
     }
 }
-void createFireBall(Field*f, int r, int c, int d){
+void createFireBall(Field *f, int r, int c, int d)
+{
     bool existFireBall = true;
     int dx = (d - 1) / 3 - 1;
     int dy = (d - 1) % 3 - 1;
     int fbx = r + dx, fby = c + dy;
     std::queue<pair<int, int>> q;
-    int visited[20][20] = { 0 };
+    int visited[20][20] = {0};
     while (existFireBall)
     {
 
@@ -166,7 +210,7 @@ void createFireBall(Field*f, int r, int c, int d){
             // bfs
 
             q.push(make_pair(fbx, fby));
-            // ×Ô¼º¸ñ¿ÉÒÔÉÕ»ØÀ´
+            // ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½ï¿½
             pair<int, int> nearest[9];
             nearest[0] = make_pair(-1, -1);
             nearest[1] = make_pair(0, -1);
@@ -177,8 +221,10 @@ void createFireBall(Field*f, int r, int c, int d){
             nearest[6] = make_pair(0, 1);
             nearest[7] = make_pair(1, 1);
             nearest[8] = make_pair(0, 0);
-            while(!q.empty()){
-                for(int i = 0;i < 9;i++){
+            while (!q.empty())
+            {
+                for (int i = 0; i < 9; i++)
+                {
                     if (!f->terrains.inBounds(q.front().first + nearest[i].first, q.front().second + nearest[i].second))
                         continue;
                     pair<int, int> edgePoint = make_pair(q.front().first + nearest[i].first, q.front().second + nearest[i].second);
@@ -193,7 +239,7 @@ void createFireBall(Field*f, int r, int c, int d){
                 q.pop();
             }
         }
-        else if(f->getUnit(fbx, fby)->getType() != UNDEFINED)
+        else if (f->getUnit(fbx, fby)->getType() != UNDEFINED)
         {
             f->getUnit(fbx, fby)->setType(UNDEFINED);
             existFireBall = false;
@@ -203,45 +249,54 @@ void createFireBall(Field*f, int r, int c, int d){
     }
 }
 
-void createEarthquake(Field* f, int r, int c, int d){
+void createEarthquake(Field *f, int r, int c, int d)
+{
     int dx = (d - 1) / 3 - 1;
     int dy = (d - 1) % 3 - 1;
-    if(dx != 0 && dy != 0){
+    if (dx != 0 && dy != 0)
+    {
         cout << "Earthquake only have four direction!<" << endl;
         return;
     }
     int tx = r + 3 * dx;
     int ty = c + 3 * dy;
-    int mid[5][2] = { {0,0},{1,0},{0,1},{-1,0},{0,-1} };
-    for(int i = 0;i < 5;i++){
+    int mid[5][2] = {{0, 0}, {1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+    for (int i = 0; i < 5; i++)
+    {
         int edge_x = tx + mid[i][0];
         int edge_y = ty + mid[i][1];
-        if(!f->inBounds(edge_x, edge_y)){
+        if (!f->inBounds(edge_x, edge_y))
+        {
             continue;
         }
-        if(f->terrains[edge_x][edge_y] == FOREST || f->terrains[edge_x][edge_y] == PLAIN){
+        if (f->terrains[edge_x][edge_y] == FOREST || f->terrains[edge_x][edge_y] == PLAIN)
+        {
             f->setTerrain(edge_x, edge_y, ABYSS);
             f->getUnit(edge_x, edge_y)->setType(UNDEFINED);
         }
-        if(f->terrains[edge_x][edge_y] == MOUNTAIN){
+        if (f->terrains[edge_x][edge_y] == MOUNTAIN)
+        {
             f->setTerrain(edge_x, edge_y, PLAIN);
         }
     }
 
-    // ¹àË®
+    // ï¿½ï¿½Ë®
     Flow(f);
 }
-bool isGameOver(Field& f) {
+bool isGameOver(Field &f)
+{
     bool sd1_units = false, sd2_units = false;
     for (int r = 0; r < f.getWidth(); r++)
     {
         for (int c = 0; c < f.getHeight(); c++)
         {
-            Unit* u = f.getUnit(r, c);
+            Unit *u = f.getUnit(r, c);
             if (u->getType() != UNDEFINED)
             {
-                if (u->getSide()) sd1_units = true;
-                else sd2_units = true;
+                if (u->getSide())
+                    sd1_units = true;
+                else
+                    sd2_units = true;
             }
             if (sd1_units && sd2_units)
             {
@@ -251,25 +306,29 @@ bool isGameOver(Field& f) {
     }
     return true;
 }
-int whoWin(Field& f){
+int whoWin(Field &f)
+{
     // return 1 if player1 win, -1 if player2, 0 if draw
     assert(isGameOver(f));
     for (int r = 0; r < f.getWidth(); r++)
     {
         for (int c = 0; c < f.getHeight(); c++)
         {
-            Unit* u = f.getUnit(r, c);
+            Unit *u = f.getUnit(r, c);
             if (u->getType() != UNDEFINED)
             {
-                if (u->getSide()) return 1;
-                else return -1;
+                if (u->getSide())
+                    return 1;
+                else
+                    return -1;
             }
         }
     }
     return 0;
 }
 // Main loop for playing the game
-void play(Field& field, istream& is, ostream& os) {
+void play(Field &field, istream &is, ostream &os)
+{
     bool side = true;
     int numTurns = 1;
     while (is)
@@ -286,19 +345,28 @@ void play(Field& field, istream& is, ostream& os) {
         os << "Turn " << numTurns << " (" << player << ")" << endl;
 
         string line;
-        while (line.length() == 0){
+        while (line.length() == 0)
+        {
             getline(is, line);
         }
         stringstream ss(line);
 
         // Fill in your code here
         GameLogic(line, &field, side);
-        if(isGameOver(field)){
+        if (isGameOver(field))
+        {
             int who = whoWin(field);
-            switch(who){
-                case 1: cout << "Winner is Player A!" << endl; return;
-                case -1: cout << "Winner is Player B!" << endl; return;
-                case 0: cout << "A Draw!" << endl; return;
+            switch (who)
+            {
+            case 1:
+                cout << "Winner is Player A!" << endl;
+                return;
+            case -1:
+                cout << "Winner is Player B!" << endl;
+                return;
+            case 0:
+                cout << "A Draw!" << endl;
+                return;
             }
             break;
         }
@@ -306,8 +374,9 @@ void play(Field& field, istream& is, ostream& os) {
         numTurns++;
     }
 }
-void Flow(Field* f){
-    // ´¦ÀíÉîÔ¨¹àË®£¬¶ÔËùÓÐµÄÉîË®¸ñ£¬ bfs
+void Flow(Field *f)
+{
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¨ï¿½ï¿½Ë®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½Ë®ï¿½ï¿½ bfs
     int visited[20][20] = {0};
 
     for (int i = 0; i < f->getWidth(); i++)
@@ -337,7 +406,8 @@ void Flow(Field* f){
                         pair<int, int> edgePoint = make_pair(q.front().first + nearest[k].first, q.front().second + nearest[k].second);
                         if (f->getTerrain(edgePoint.first, edgePoint.second) != ABYSS)
                             continue;
-                        if(visited[edgePoint.first][edgePoint.second]) continue;
+                        if (visited[edgePoint.first][edgePoint.second])
+                            continue;
                         visited[edgePoint.first][edgePoint.second] = 1;
                         q.push(edgePoint);
                         f->setTerrain(edgePoint.first, edgePoint.second, WATER);
@@ -349,11 +419,12 @@ void Flow(Field* f){
     }
 }
 
-Field* loadmap(istream& is) {
-    int m, n, nt, mu; //m*n field, nt special places, mu special units
+Field *loadmap(istream &is)
+{
+    int m, n, nt, mu; // m*n field, nt special places, mu special units
     is >> m >> n >> nt >> mu;
-    Field* f = new Field(m, n);
-    // ³õÊ¼»¯
+    Field *f = new Field(m, n);
+    // ï¿½ï¿½Ê¼ï¿½ï¿½
     for (int i = 0; i < f->getHeight(); i++)
     {
         for (int j = 0; j < f->getWidth(); j++)
@@ -361,7 +432,7 @@ Field* loadmap(istream& is) {
             f->units[i][j] = new Unit(UNDEFINED, true);
         }
     }
-    // ¶ÁÈ¡ÊäÈë
+    // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
 
     for (int i = 0; i < nt; i++)
     {
@@ -370,18 +441,27 @@ Field* loadmap(istream& is) {
         is >> r >> c >> t;
         switch (t)
         {
-            case 'W':f->terrains[r][c] = WATER; break;
-            case 'F':f->terrains[r][c] = FOREST; break;
-            case 'M':f->terrains[r][c] = MOUNTAIN; break;
-            case 'A':f->terrains[r][c] = ABYSS; break;
-            default:cout << "Failed to load map!" << endl;
+        case 'W':
+            f->terrains[r][c] = WATER;
+            break;
+        case 'F':
+            f->terrains[r][c] = FOREST;
+            break;
+        case 'M':
+            f->terrains[r][c] = MOUNTAIN;
+            break;
+        case 'A':
+            f->terrains[r][c] = ABYSS;
+            break;
+        default:
+            cout << "Failed to load map!" << endl;
         }
     }
     for (int i = 0; i < mu; i++)
     {
         int r, c;
         char s;
-        //char* u = nullptr;
+        // char* u = nullptr;
         string u;
         is >> r >> c >> s >> u;
         bool sd = (s == 'A');
@@ -390,19 +470,19 @@ Field* loadmap(istream& is) {
             f->units[r][c] = nullptr;
             continue;
         }
-        if (u=="FT")
+        if (u == "FT")
         {
             f->units[r][c] = new Unit(FOOTMAN, sd);
         }
-        else if (u=="KN")
+        else if (u == "KN")
         {
             f->units[r][c] = new Unit(KNIGHT, sd);
         }
-        else if (u=="AR")
+        else if (u == "AR")
         {
             f->units[r][c] = new Unit(ARCHER, sd);
         }
-        else if (u=="MG")
+        else if (u == "MG")
         {
             f->units[r][c] = new Unit(MAGE, sd);
         }
@@ -411,20 +491,20 @@ Field* loadmap(istream& is) {
             cout << "Failed to load map!" << endl;
         }
     }
-    // ¹àË®
+    // ï¿½ï¿½Ë®
     Flow(f);
-    // ²»¿ÉÓâÔ½
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô½
     for (int i = 0; i < f->getHeight(); i++)
     {
         for (int j = 0; j < f->getWidth(); j++)
         {
-            if(!f->canOver(i, j)){
+            if (!f->canOver(i, j))
+            {
                 delete f->units[i][j];
                 f->units[i][j] = new Unit(UNDEFINED, true);
             }
         }
     }
-
 
     return f;
 }

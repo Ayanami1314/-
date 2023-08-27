@@ -1,5 +1,5 @@
 from PIL import Image
-
+import os
 def remove_background(image_path):
     # 打开图片
     image = Image.open(image_path)
@@ -26,6 +26,12 @@ def remove_background(image_path):
 
     # 保存图片（保存为同名文件，覆盖原始图片）
     image.save(image_path)
-
+def rm_bg_dir(dir_path):
+    # 遍历输入文件夹中的所有文件
+    for filename in os.listdir(dir_path):
+        if filename.endswith('.png'):
+            input_path = os.path.join(dir_path, filename)
+            remove_background(input_path)
 # 调用函数去除图片背景
-remove_background("./vector_icon_resized/crosshair.png")
+# remove_background("./vector_icon_resized/crosshair.png")
+rm_bg_dir(r"D:\Desktop\battlefield\vector_icon_resized_alpha")

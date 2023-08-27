@@ -44,3 +44,17 @@ bool whichBlockChoose()
 
 
 
+
+
+  // mask code: 0-9 characters, 10-19 terrain, 20-39 user_input, 40-59 attached-effects
+
+  // 1 red_ft, 2 red_kn, 3 red_ar, 4 red_mg
+
+  // -1, -2, -3, -4 blue
+
+  // 10 plain, 11 water, 12 mountains, 13 abyss, 19 fire
+
+  // 20 fireball, 21 earthquake, 22 move_arrow, 23 choice_arrow, 24 attack
+
+
+

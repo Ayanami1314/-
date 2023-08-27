@@ -2,8 +2,10 @@
 #define GAME_UTILITY_
 #include <memory>
 using namespace std;
-void loadSmallMap(unique_ptr<int[]> &map);
-void loadEmptyMap(unique_ptr<int[]> &map, int mapSize);
-bool isMapChanged(int *oldMap, int *newMap, int size);
-void arrayCopy(int *source, int *target, int size);
+void loadSmallMap(unique_ptr<pair<int, int>[]> &map);
+void loadEmptyMap(unique_ptr<pair<int, int>[]> &map, int mapSize);
+bool isMapChanged(pair<int, int> *oldMap, pair<int, int> *newMap, int size);
+void arrayCopy(pair<int, int> *source, pair<int, int> *target, int size);
+int m_dis(int x0, int y0, int x1, int y1);
+string description(int code);
 #endif

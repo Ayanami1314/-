@@ -27,8 +27,9 @@ private:
     const int blockSize = MapWidth / MapSize;
     int turnNumber = 0;
     string whosTurn = "Red";
-    unique_ptr<int[]> blocks = make_unique<int[]>(MapSize * MapSize);
-    unique_ptr<int[]> mapCache = make_unique<int[]>(MapSize * MapSize);
+    // terrain:first layer, character: second layer
+    unique_ptr<pair<int, int>[]> blocks = make_unique<pair<int, int>[]>(MapSize * MapSize);
+    unique_ptr<pair<int, int>[]> mapCache = make_unique<pair<int, int>[]>(MapSize * MapSize);
     vector<int> onClick;
     unique_ptr<olc::Sprite> (*codePicMap)(int) = [](int code)
     {
@@ -37,12 +38,13 @@ private:
         // -1, -2, -3, -4 blue
         // 10 plain, 11 water, 12 mountains, 13 abyss, 14 forest,  19 fire
         // 20 fireball, 21 earthquake, 22 move_arrow, 23 choice_arrow, 24 attack
+        // combined img: forest + ...
         std::unique_ptr<olc::Sprite> red_knight = make_unique<olc::Sprite>("./vector_icon_resized/red-knight.png");
         std::unique_ptr<olc::Sprite> blue_knight = make_unique<olc::Sprite>("./vector_icon_resized/blue-knight.png");
         std::unique_ptr<olc::Sprite> red_archer = make_unique<olc::Sprite>("./vector_icon_resized/red-archer.png");
         std::unique_ptr<olc::Sprite> blue_archer = make_unique<olc::Sprite>("./vector_icon_resized/blue-archer.png");
-        std::unique_ptr<olc::Sprite> red_wizard = make_unique<olc::Sprite>("./vector_icon_resized/red-wizard.png");
-        std::unique_ptr<olc::Sprite> blue_wizard = make_unique<olc::Sprite>("./vector_icon_resized/blue-wizard.png");
+        std::unique_ptr<olc::Sprite> red_wizard = make_unique<olc::Sprite>("./vector_icon_resized/red-wage.png");
+        std::unique_ptr<olc::Sprite> blue_wizard = make_unique<olc::Sprite>("./vector_icon_resized/blue-wage.png");
         std::unique_ptr<olc::Sprite> red_footman = make_unique<olc::Sprite>("./vector_icon_resized/red-footman.png");
         std::unique_ptr<olc::Sprite> blue_footman = make_unique<olc::Sprite>("./vector_icon_resized/blue-footman.png");
         std::unique_ptr<olc::Sprite> forest = make_unique<olc::Sprite>("./vector_icon_resized/forest.png");
@@ -56,6 +58,7 @@ private:
         std::unique_ptr<olc::Sprite> move_arrow = make_unique<olc::Sprite>("./vector_icon_resized/move.png");
         std::unique_ptr<olc::Sprite> attack = make_unique<olc::Sprite>("./vector_icon_resized/knife-thrust.png");
         std::unique_ptr<olc::Sprite> map = make_unique<olc::Sprite>("./vector_icon_resized/plain-square.png");
+
         //        std::unique_ptr<olc::Decal> red_knight_decal = make_unique<olc::Decal>(red_knight.get());
         //        std::unique_ptr<olc::Decal> blue_knight_decal = make_unique<olc::Decal>(blue_knight.get());
         //        std::unique_ptr<olc::Decal> red_archer_decal = make_unique<olc::Decal>(red_archer.get());
@@ -150,7 +153,8 @@ public:
         {
             onClick[i] = 0; // clear other state
         }
-        onClick[x / blockSize + (y / blockSize - upReserved) * MapSize] = 1;
+        int tar = x / blockSize + (y / blockSize - upReserved) * MapSize;
+        onClick[tar] = (blocks[tar].second != 0 ? blocks[tar].second : blocks[tar].first);
         return true;
     }
     bool OnUserUpdate(float fElapsedTime) override
@@ -164,20 +168,48 @@ public:
             clicked = whichBlockClicked(clickX, clickY);
         }
         // upper 2 block size: (who's turn, turn number)
-        DrawString(0, 0, "Turns: " + turnNumber, olc::WHITE, 3u);
+        DrawString(0, 0, "Turns: " + to_string(turnNumber), olc::WHITE, 3u);
         DrawString(0, blockSize, "Player " + whosTurn, olc::WHITE, 3u);
-        // sideBar
-
+        // right sideBar left & right line width: 1/30 map width, up & bottom line width: half blocksize
+        // FillRect(MapSize * blockSize, 0, MapSize * blockSize / 3, MapSize * blockSize, olc::WHITE);
+        // FillRect(MapSize * blockSize * 31 / 30, blockSize / 2, MapSize * blockSize * 14 / 45, MapSize * blockSize - blockSize, olc::BLACK);
+        int sideBarLeftTopX = MapSize * blockSize * 32 / 30;
+        int sideBarLeftTopY = blockSize;
         if (clicked || isMapChanged(mapCache.get(), blocks.get(), MapSize * MapSize))
         {
             // only when map changed or clicked valid area rerender map
             Clear(olc::BLACK);
+            if (clicked)
+            {
+                int no = 0;
+                for (int i = 0; i < MapSize * MapSize; ++i)
+                {
+                    if (onClick[i] != 0)
+                    {
+                        no = onClick[i];
+                        break;
+                    }
+                }
+
+                DrawString(sideBarLeftTopX, sideBarLeftTopY, description(no), olc::WHITE, 2u);
+                if (no == 4 || no == -4)
+                {
+                    // mage
+                    DrawSprite(sideBarLeftTopX, sideBarLeftTopY + 2 * blockSize, codePicMap(20).get());
+                    DrawSprite(sideBarLeftTopX + blockSize, sideBarLeftTopY + 2 * blockSize, codePicMap(21).get());
+                }
+            }
             for (int i = 0; i < MapSize * MapSize; i++)
             {
                 // + 2, leave some space for title
                 // x: col, y: row, in map index, (r, c) -> (y, x)
                 // i: row*MapSize + col, x = i % MapSize, y = 2 + i / MapSize
-                DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(blocks[i]).get());
+                DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(blocks[i].first).get());
+                if (blocks[i].second != 0)
+                {
+                    DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(blocks[i].second).get());
+                }
+
                 if (onClick[i] != 0)
                 {
                     // choose picture
@@ -193,7 +225,7 @@ public:
 int main()
 {
     battleField bf;
-    bf.Construct(800, 800, 2, 2);
+    bf.Construct(1000, 800, 2, 2);
     bf.Start();
     return 0;
 }
