@@ -327,53 +327,56 @@ int whoWin(Field &f)
     return 0;
 }
 // Main loop for playing the game
-void play(Field &field, istream &is, ostream &os)
-{
-    bool side = true;
-    int numTurns = 1;
-    while (is)
-    {
-        // Print the new map
-        os << field << endl;
 
-        string player;
-        if (side)
-            player = "Player A";
-        else
-            player = "Player B";
+/* commandline play logic below */
 
-        os << "Turn " << numTurns << " (" << player << ")" << endl;
+// void play(Field &field, istream &is, ostream &os)
+// {
+//     bool side = true;
+//     int numTurns = 1;
+//     while (is)
+//     {
+//         // Print the new map
+//         os << field << endl;
 
-        string line;
-        while (line.length() == 0)
-        {
-            getline(is, line);
-        }
-        stringstream ss(line);
+//         string player;
+//         if (side)
+//             player = "Player A";
+//         else
+//             player = "Player B";
 
-        // Fill in your code here
-        GameLogic(line, &field, side);
-        if (isGameOver(field))
-        {
-            int who = whoWin(field);
-            switch (who)
-            {
-            case 1:
-                cout << "Winner is Player A!" << endl;
-                return;
-            case -1:
-                cout << "Winner is Player B!" << endl;
-                return;
-            case 0:
-                cout << "A Draw!" << endl;
-                return;
-            }
-            break;
-        }
-        side = !side;
-        numTurns++;
-    }
-}
+//         os << "Turn " << numTurns << " (" << player << ")" << endl;
+
+//         string line;
+//         while (line.length() == 0)
+//         {
+//             getline(is, line);
+//         }
+//         stringstream ss(line);
+
+//         // Fill in your code here
+//         GameLogic(line, &field, side);
+//         if (isGameOver(field))
+//         {
+//             int who = whoWin(field);
+//             switch (who)
+//             {
+//             case 1:
+//                 cout << "Winner is Player A!" << endl;
+//                 return;
+//             case -1:
+//                 cout << "Winner is Player B!" << endl;
+//                 return;
+//             case 0:
+//                 cout << "A Draw!" << endl;
+//                 return;
+//             }
+//             break;
+//         }
+//         side = !side;
+//         numTurns++;
+//     }
+// }
 void Flow(Field *f)
 {
     // ������Ԩ��ˮ�������е���ˮ�� bfs

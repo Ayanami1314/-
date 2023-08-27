@@ -23,10 +23,11 @@ class Field
 public:
     friend Field *loadmap(std::istream &is);
     //  GUI's backend
-    void loadmap_array(pair<int, int> *map, int mapSize, int h, int w);
+    void loadmap_array(pair<int, int> *map, int mapSize);
     friend void createFireBall(Field *f, int r, int c, int d);
     friend void createEarthquake(Field *f, int r, int c, int d);
     friend void Flow(Field *f);
+    void updateArray(pair<int, int> *mapArray, int size);
     bool canOver(int r, int c) const
     {
         return this->terrains[r][c] != WATER && this->terrains[r][c] != MOUNTAIN && this->terrains[r][c] != ABYSS;

@@ -14,23 +14,63 @@
 #include "olcPixelGameEngine.h"
 #include "utility.h"
 using namespace std;
-
+class clickButton
+{
+public:
+    int posX;
+    int posY;
+    int width;
+    int height;
+    bool clicked = false;
+    bool exist = false;
+    bool in(int x, int y)
+    {
+        return x >= posX && x <= posX + width && y >= posY && y <= posY + height;
+    }
+    clickButton(int x, int y, int w, int h, bool c = false)
+    {
+        posX = x;
+        posY = y;
+        width = w;
+        height = h;
+        clicked = c;
+    }
+    clickButton() = default;
+    ~clickButton() = default;
+};
+struct sideBar
+{
+    int posX;
+    int posY;
+    int width;
+    int height;
+};
+const int MapWidth = 450;
+const int MapHeight = 450;
+const int MapSize = 9;
+const int blockSize = MapWidth / MapSize;
+Field *f = new Field(MapSize, MapSize);
 class battleField : public olc::PixelGameEngine
 {
 private:
     // load the resource
 
     // init
-    const int MapWidth = 450;
-    const int MapHeight = 450;
-    const int MapSize = 9;
-    const int blockSize = MapWidth / MapSize;
+
     int turnNumber = 0;
     string whosTurn = "Red";
     // terrain:first layer, character: second layer
     unique_ptr<pair<int, int>[]> blocks = make_unique<pair<int, int>[]>(MapSize * MapSize);
     unique_ptr<pair<int, int>[]> mapCache = make_unique<pair<int, int>[]>(MapSize * MapSize);
-    vector<int> onClick;
+    vector<int> onClick; // blocks on the map
+    clickButton moveButton;
+    clickButton attackButton;
+    clickButton fireBall;
+    clickButton earthquake;
+    clickButton cancelButton;
+    sideBar sbar;
+    int lastChooseBlockIndex = -1;
+
     unique_ptr<olc::Sprite> (*codePicMap)(int) = [](int code)
     {
         // mask code: 0-9 characters, 10-19 terrain, 20-39 user_input, 40-59 attached-effects
@@ -58,7 +98,7 @@ private:
         std::unique_ptr<olc::Sprite> move_arrow = make_unique<olc::Sprite>("./vector_icon_resized/move.png");
         std::unique_ptr<olc::Sprite> attack = make_unique<olc::Sprite>("./vector_icon_resized/knife-thrust.png");
         std::unique_ptr<olc::Sprite> map = make_unique<olc::Sprite>("./vector_icon_resized/plain-square.png");
-
+        std::unique_ptr<olc::Sprite> cancel = make_unique<olc::Sprite>("./vector_icon_resized/cancel.png");
         //        std::unique_ptr<olc::Decal> red_knight_decal = make_unique<olc::Decal>(red_knight.get());
         //        std::unique_ptr<olc::Decal> blue_knight_decal = make_unique<olc::Decal>(blue_knight.get());
         //        std::unique_ptr<olc::Decal> red_archer_decal = make_unique<olc::Decal>(red_archer.get());
@@ -123,6 +163,8 @@ private:
             return choice_arrow;
         case 24:
             return attack;
+        case 25:
+            return cancel;
         default:
             return map;
         }
@@ -138,24 +180,53 @@ public:
     {
         loadSmallMap(blocks);
         loadEmptyMap(mapCache, MapSize);
+        f->loadmap_array(blocks.get(), MapSize);
         SetPixelMode(olc::Pixel::MASK);
         Clear(olc::BLACK);
         onClick.resize(MapSize * MapSize);
         onClick.assign(MapSize * MapSize, 0);
+        int sideBarLeftTopX = MapSize * blockSize * 32 / 30;
+        int sideBarLeftTopY = blockSize;
+        moveButton = clickButton(sideBarLeftTopX, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize, false);
+        attackButton = clickButton(sideBarLeftTopX + blockSize, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize, false);
+        fireBall = clickButton(sideBarLeftTopX, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize, false);
+        earthquake = clickButton(sideBarLeftTopX + blockSize, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize, false);
+        cancelButton = clickButton(sideBarLeftTopX, sideBarLeftTopY + 6 * blockSize, 2 * blockSize, blockSize, false);
+        sbar.posX = sideBarLeftTopX;
+        sbar.posY = sideBarLeftTopY;
+        sbar.height = MapSize * blockSize;
+        sbar.width = MapSize * blockSize / 3;
         return true;
     }
     bool whichBlockClicked(int x, int y, int upReserved = 2)
     {
         // upReserved: Title area
-        if (x < 0 || y < upReserved * blockSize)
-            return false; // click invalid area
+        // check if and which block be clicked
         for (int i = 0; i < MapSize * MapSize; ++i)
         {
-            onClick[i] = 0; // clear other state
+            onClick[i] = 0; // clear state
         }
-        int tar = x / blockSize + (y / blockSize - upReserved) * MapSize;
-        onClick[tar] = (blocks[tar].second != 0 ? blocks[tar].second : blocks[tar].first);
-        return true;
+        bool mapClicked = false;
+        if (x < 0 || y < upReserved * blockSize)
+            return false; // click invalid area
+        if (x < MapSize * blockSize && y < MapSize * blockSize + upReserved * blockSize)
+        {
+            int tar = x / blockSize + (y / blockSize - upReserved) * MapSize;
+            onClick[tar] = (blocks[tar].second != 0 ? blocks[tar].second : blocks[tar].first);
+            return true;
+        }
+
+        // additional effect, judge if click the buttons
+        auto checkButton = [x, y](clickButton &button)
+        {
+            if (button.exist && button.in(x, y))
+            {
+                button.clicked = true;
+                return true;
+            }
+            return false;
+        };
+        return checkButton(cancelButton) || checkButton(attackButton) || checkButton(moveButton) || checkButton(earthquake) || checkButton(fireBall);
     }
     bool OnUserUpdate(float fElapsedTime) override
     {
@@ -173,31 +244,88 @@ public:
         // right sideBar left & right line width: 1/30 map width, up & bottom line width: half blocksize
         // FillRect(MapSize * blockSize, 0, MapSize * blockSize / 3, MapSize * blockSize, olc::WHITE);
         // FillRect(MapSize * blockSize * 31 / 30, blockSize / 2, MapSize * blockSize * 14 / 45, MapSize * blockSize - blockSize, olc::BLACK);
-        int sideBarLeftTopX = MapSize * blockSize * 32 / 30;
-        int sideBarLeftTopY = blockSize;
+
         if (clicked || isMapChanged(mapCache.get(), blocks.get(), MapSize * MapSize))
         {
             // only when map changed or clicked valid area rerender map
             Clear(olc::BLACK);
             if (clicked)
             {
+                if (cancelButton.clicked)
+                {
+                    // cancel all states
+                    fireBall.exist = false;
+                    earthquake.exist = false;
+                    attackButton.exist = false;
+                    cancelButton.exist = false;
+                    for (int i = 0; i < MapSize * MapSize; ++i)
+                    {
+                        onClick[i] = 0;
+                    }
+                    lastChooseBlockIndex = -1;
+                    return true; // next call
+                }
                 int no = 0;
+                int chooseBlockIndex = -1;
                 for (int i = 0; i < MapSize * MapSize; ++i)
                 {
                     if (onClick[i] != 0)
                     {
                         no = onClick[i];
+                        chooseBlockIndex = i;
                         break;
                     }
                 }
-
-                DrawString(sideBarLeftTopX, sideBarLeftTopY, description(no), olc::WHITE, 2u);
+                // render
+                DrawString(sbar.posX, sbar.posY, description(no), olc::WHITE, 2u);
+                DrawSprite(cancelButton.posX, cancelButton.posY, codePicMap(25).get());
+                cancelButton.exist = true;
                 if (no == 4 || no == -4)
                 {
-                    // mage
-                    DrawSprite(sideBarLeftTopX, sideBarLeftTopY + 2 * blockSize, codePicMap(20).get());
-                    DrawSprite(sideBarLeftTopX + blockSize, sideBarLeftTopY + 2 * blockSize, codePicMap(21).get());
+                    // mage have two additional choices
+                    DrawSprite(fireBall.posX, fireBall.posY, codePicMap(20).get());
+                    DrawSprite(earthquake.posX, earthquake.posY, codePicMap(21).get());
+                    DrawSprite(moveButton.posX, moveButton.posY, codePicMap(22).get()); // move
+                    moveButton.exist = true;
+                    fireBall.exist = true;
+                    earthquake.exist = true;
+                    attackButton.exist = false;
                 }
+                else if (no != 0) // no=0: click button or other else instead of map blocks
+                {
+                    DrawSprite(attackButton.posX, attackButton.posY, codePicMap(24).get()); // attack
+                    DrawSprite(moveButton.posX, moveButton.posY, codePicMap(22).get());     // move
+                    moveButton.exist = true;
+                    attackButton.exist = true;
+                    fireBall.exist = false;
+                    earthquake.exist = false;
+                }
+
+                // move & attack logic
+                // first click attack or fireball or earthquake, then click block 2
+                if (lastChooseBlockIndex != -1 && chooseBlockIndex != -1)
+                {
+                    if (moveButton.clicked)
+                    {
+                        // move
+                    }
+                    if (attackButton.clicked)
+                    {
+                        // attack
+                    }
+                    if (fireBall.clicked)
+                    {
+                        // fireball
+                    }
+                    if (earthquake.clicked)
+                    {
+                        // earthquake
+                    }
+                    f->updateArray(blocks.get(), MapSize * MapSize);
+                }
+
+                if (chooseBlockIndex != -1)
+                    lastChooseBlockIndex = chooseBlockIndex;
             }
             for (int i = 0; i < MapSize * MapSize; i++)
             {

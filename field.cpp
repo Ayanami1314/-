@@ -172,16 +172,16 @@ bool Field::inBounds(int row, int col) const
     }
     return true;
 }
-void Field::loadmap_array(pair<int, int> *map, int mapSize, int h, int w)
+void Field::loadmap_array(pair<int, int> *map, int mapSize)
 {
     // mask code: 0-9 characters, 10-19 terrain, 20-39 user_input, 40-59 attached-effects
     // 1 red_ft, 2 red_kn, 3 red_ar, 4 red_mg
     // -1, -2, -3, -4 blue
     // 10 plain, 11 water, 12 mountains, 13 abyss, 19 fire, 14 forest
     // 20 fireball, 21 earthquake, 22 move_arrow, 23 choice_arrow, 24 attack
-    for (int i = 0; i < h; ++i)
+    for (int i = 0; i < mapSize; ++i)
     {
-        for (int j = 0; j < w; ++j)
+        for (int j = 0; j < mapSize; ++j)
         {
             switch (map[i * mapSize + j].second)
             {
@@ -238,6 +238,75 @@ void Field::loadmap_array(pair<int, int> *map, int mapSize, int h, int w)
                 this->setTerrain(i, j, PLAIN);
                 break;
             }
+        }
+    }
+}
+void Field::updateArray(pair<int, int> *mapArray, int size)
+{
+    // call it when field changes to update mapArray
+    // the reverse map of loadmap_array, use the same code set
+    auto reverseMapTerrain = [](Terrain t) -> int
+    {
+        switch (t)
+        {
+        case PLAIN:
+            return 10;
+            break;
+        case MOUNTAIN:
+            return 12;
+            break;
+        case WATER:
+            return 11;
+            break;
+        case ABYSS:
+            return 13;
+            break;
+        case FOREST:
+            return 14;
+            break;
+        case ONFIRE:
+            return 19;
+            break;
+        default:
+            return 10;
+            break;
+        }
+    };
+    auto reverseMapUnit = [](Unit *pUnit) -> int
+    {
+        UnitType ut = pUnit->getType();
+        bool sd = pUnit->getSide();
+        int code = 0;
+        switch (ut)
+        {
+        case UNDEFINED:
+            code = 0;
+            break;
+        case FOOTMAN:
+            code = 1;
+            break;
+        case KNIGHT:
+            code = 2;
+            break;
+        case ARCHER:
+            code = 3;
+            break;
+        case MAGE:
+            code = 4;
+            break;
+        default:
+            code = 0;
+            break;
+        }
+        return sd ? code : -code;
+    };
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+
+            mapArray[i * size + j].first = reverseMapTerrain(this->getTerrain(i, j));
+            mapArray[i * size + j].second = reverseMapUnit(this->getUnit(i, j));
         }
     }
 }
