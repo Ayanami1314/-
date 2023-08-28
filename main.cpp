@@ -123,7 +123,7 @@ private:
         // mask code: 0-9 characters, 10-19 terrain, 20-39 user_input, 40-59 attached-effects
         // 1 red_ft, 2 red_kn, 3 red_ar, 4 red_mg
         // -1, -2, -3, -4 blue
-        // 10 plain, 11 water, 12 mountains, 13 abyss, 19 fire
+        // 10 plain, 11 water, 12 mountains, 14 forest, 13 abyss, 19 fire
         // 20 fireball, 21 earthquake, 22 move_arrow, 23 choice_arrow, 24 attack
         case 1:
             return red_footman;
@@ -263,7 +263,7 @@ public:
                         onClick[i] = 0;
                     }
                     lastChooseBlockIndex = -1;
-                    return true; // next call
+                    cancelButton.clicked = false;
                 }
                 int no = 0;
                 int chooseBlockIndex = -1;
@@ -291,7 +291,7 @@ public:
                     earthquake.exist = true;
                     attackButton.exist = false;
                 }
-                else if (no != 0) // no=0: click button or other else instead of map blocks
+                else if (abs(no) > 0 && abs(no) < 10) // no=0: click button or other else instead of map blocks
                 {
                     DrawSprite(attackButton.posX, attackButton.posY, codePicMap(24).get()); // attack
                     DrawSprite(moveButton.posX, moveButton.posY, codePicMap(22).get());     // move
@@ -321,7 +321,7 @@ public:
                     {
                         // earthquake
                     }
-                    f->updateArray(blocks.get(), MapSize * MapSize);
+                    f->updateArray(blocks.get(), MapSize);
                 }
 
                 if (chooseBlockIndex != -1)

@@ -231,6 +231,7 @@ void Field::loadmap_array(pair<int, int> *map, int mapSize)
                 break;
             case 14:
                 this->setTerrain(i, j, FOREST);
+                break;
             case 19:
                 this->setTerrain(i, j, ONFIRE);
                 break;
