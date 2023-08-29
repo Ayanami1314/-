@@ -23,38 +23,57 @@ public:
     int height;
     bool in(int x, int y)
     {
-        return x >= posX && x <= posX + width && y >= posY && y <= posY + height;
+        return x >= this->posX && x <= this->posX + this->width && y >= this->posY && y <= this->posY + this->height;
     }
-    Area() = default;
+    Area()
+    {
+        posX = 0;
+        posY = 0;
+        width = 0;
+        height = 0;
+    };
+    Area(const Area &a) = default;
     ~Area() = default;
     Area(int x, int y, int w, int h)
     {
-        posX = x;
-        posY = y;
-        width = w;
-        height = h;
+        this->posX = x;
+        this->posY = y;
+        this->width = w;
+        this->height = h;
+    }
+    olc::vi2d getLeftTop()
+    {
+        return olc::vi2d(this->posX, this->posY);
+    }
+    olc::vi2d getRightBottom()
+    {
+        return olc::vi2d(this->posX + this->width, this->posY + this->height);
     }
 };
 class clickButton : public Area
 {
 public:
-    int posX;
-    int posY;
-    int width;
-    int height;
     bool clicked = false;
     bool exist = false;
 
-    clickButton(int x, int y, int w, int h, bool c = false)
+    clickButton(int x, int y, int w, int h, bool c = false) : Area(x, y, w, h)
     {
-        posX = x;
-        posY = y;
-        width = w;
-        height = h;
-        clicked = c;
+        this->clicked = c;
     }
     clickButton() = default;
+    clickButton(const clickButton &c) = default;
     ~clickButton() = default;
+    void printInfo()
+    {
+        cout << "clicked: " << clicked << ", exist: " << exist << endl;
+    }
+    // void setButtonLoc(int x, int y, int w, int h)
+    // {
+    //     this->posX = x;
+    //     this->posY = y;
+    //     this->width = w;
+    //     this->height = h;
+    // }
 };
 struct sideBar
 {
@@ -68,6 +87,14 @@ const int MapHeight = 450;
 const int MapSize = 9;
 const int blockSize = MapWidth / MapSize;
 Field *f = new Field(MapSize, MapSize);
+int sideBarLeftTopX = MapSize * blockSize * 32 / 30;
+int sideBarLeftTopY = blockSize;
+clickButton *pMoveButton = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize);
+clickButton *pAttackButton = new clickButton(sideBarLeftTopX + blockSize, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize);
+clickButton *pFireBall = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize);
+clickButton *pEarthquake = new clickButton(sideBarLeftTopX + blockSize, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize);
+clickButton *pCancelButton = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 6 * blockSize, 2 * blockSize, blockSize);
+Area *pMoveStepArea = new Area(sideBarLeftTopX, sideBarLeftTopY + blockSize, 2 * blockSize, blockSize);
 class battleField : public olc::PixelGameEngine
 {
 private:
@@ -81,13 +108,15 @@ private:
     unique_ptr<pair<int, int>[]> blocks = make_unique<pair<int, int>[]>(MapSize * MapSize);
     unique_ptr<pair<int, int>[]> mapCache = make_unique<pair<int, int>[]>(MapSize * MapSize);
     vector<int> onClick; // blocks on the map
-    clickButton moveButton;
-    clickButton attackButton;
-    clickButton fireBall;
-    clickButton earthquake;
-    clickButton cancelButton;
+    // int sideBarLeftTopX = MapSize * blockSize * 32 / 30;
+    // int sideBarLeftTopY = blockSize;
+    // clickButton moveButton = *pMoveButton;
+    // clickButton attackButton = *pAttackButton;
+    // clickButton fireBall = *pFireBall;
+    // clickButton earthquake = *pEarthquake;
+    // clickButton cancelButton = *pCancelButton;
     sideBar sbar;
-    Area moveStepArea;
+    Area moveStepArea = *pMoveStepArea;
     int lastChooseBlockIndex = -1;
     int chooseBlockIndex = -1;
     unique_ptr<olc::Sprite> (*codePicMap)(int) = [](int code)
@@ -205,18 +234,32 @@ public:
         onClick.assign(MapSize * MapSize, 0);
         int sideBarLeftTopX = MapSize * blockSize * 32 / 30;
         int sideBarLeftTopY = blockSize;
-        moveButton = clickButton(sideBarLeftTopX, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize, false);
-        attackButton = clickButton(sideBarLeftTopX + blockSize, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize, false);
-        fireBall = clickButton(sideBarLeftTopX, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize, false);
-        earthquake = clickButton(sideBarLeftTopX + blockSize, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize, false);
-        cancelButton = clickButton(sideBarLeftTopX, sideBarLeftTopY + 6 * blockSize, 2 * blockSize, blockSize, false);
+        // setButtonLoc(sideBarLeftTopX, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize);
+        // attackButton.setButtonLoc(sideBarLeftTopX + blockSize, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize);
+        // fireBall.setButtonLoc(sideBarLeftTopX, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize);
+        // earthquake.setButtonLoc(sideBarLeftTopX + blockSize, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize);
+        // cancelButton.setButtonLoc(sideBarLeftTopX, sideBarLeftTopY + 6 * blockSize, 2 * blockSize, blockSize);
+        cout << "move area" << pMoveButton->getLeftTop() << pMoveButton->getRightBottom() << endl;
         sbar.posX = sideBarLeftTopX;
         sbar.posY = sideBarLeftTopY;
         sbar.height = MapSize * blockSize;
         sbar.width = MapSize * blockSize / 3;
-        moveStepArea = Area(sideBarLeftTopX, sideBarLeftTopY + blockSize, 2 * blockSize, blockSize);
+        moveStepArea = *pMoveStepArea;
         CreateLayer(); // create second layer
         return true;
+    }
+    void drawDetectBox(clickButton b)
+    {
+        if (!b.exist)
+            return;
+        olc::vi2d v = {b.posX, b.posY};
+        olc::vi2d v2 = {b.posX, b.posY + b.height};
+        olc::vi2d v3 = {b.posX + b.width, b.posY + b.height};
+        olc::vi2d v4 = {b.posX + b.width, b.posY};
+        DrawLine(v, v2, olc::GREEN);
+        DrawLine(v2, v3, olc::GREEN);
+        DrawLine(v3, v4, olc::GREEN);
+        DrawLine(v4, v, olc::GREEN);
     }
     bool whichBlockClicked(int x, int y, int upReserved = 2)
     {
@@ -227,7 +270,7 @@ public:
             onClick[i] = 0; // clear state
         }
         bool mapClicked = false;
-        if (x < 0 || y < upReserved * blockSize)
+        if (x < 0 || y < 0)
             return false; // click invalid area
         if (x < MapSize * blockSize && y < MapSize * blockSize + upReserved * blockSize)
         {
@@ -237,19 +280,20 @@ public:
         }
 
         // additional effect, judge if click the buttons
-        auto checkButton = [x, y](clickButton &button)
+        auto checkButton = [x, y](clickButton *pbutton)
         {
-            if (button.exist && button.in(x, y))
+            if (pbutton->exist && pbutton->in(x, y))
             {
-                button.clicked = true;
+                pbutton->clicked = true;
                 return true;
             }
             return false;
         };
-        return checkButton(cancelButton) || checkButton(attackButton) || checkButton(moveButton) || checkButton(earthquake) || checkButton(fireBall);
+        return checkButton(pCancelButton) || checkButton(pAttackButton) || checkButton(pMoveButton) || checkButton(pEarthquake) || checkButton(pFireBall);
     }
     bool OnUserUpdate(float fElapsedTime) override
     {
+
         SetPixelMode(olc::Pixel::ALPHA);
         // get mouse click information
         bool clicked = false;
@@ -257,6 +301,11 @@ public:
         {
             int clickX = GetMouseX();
             int clickY = GetMouseY();
+            DrawCircle(clickX, clickY, 5, olc::RED);
+            cout << "click pos:" << clickX << "," << clickY << endl;
+            cout << "move area" << pMoveButton->getLeftTop() << pMoveButton->getRightBottom() << endl;
+            cout << "attack in:" << pAttackButton->in(clickX, clickY) << endl;
+            cout << "move in:" << pMoveButton->in(clickX, clickY) << endl;
             clicked = whichBlockClicked(clickX, clickY);
         }
         // upper 2 block size: (who's turn, turn number)
@@ -273,20 +322,20 @@ public:
             Clear(olc::BLACK);
             if (clicked)
             {
-                if (cancelButton.clicked)
+                if (pCancelButton->clicked)
                 {
                     // cancel all states
-                    fireBall.exist = false;
-                    earthquake.exist = false;
-                    attackButton.exist = false;
-                    cancelButton.exist = false;
+                    pFireBall->exist = false;
+                    pEarthquake->exist = false;
+                    pAttackButton->exist = false;
+                    pCancelButton->exist = false;
                     for (int i = 0; i < MapSize * MapSize; ++i)
                     {
                         onClick[i] = 0;
                     }
                     lastChooseBlockIndex = -1;
                     chooseBlockIndex = -1;
-                    cancelButton.clicked = false;
+                    pCancelButton->clicked = false;
                 }
                 int no = 0;
                 for (int i = 0; i < MapSize * MapSize; ++i)
@@ -300,42 +349,43 @@ public:
                 }
                 // render
                 DrawString(sbar.posX, sbar.posY, description(no), olc::WHITE, 2u);
-                DrawSprite(cancelButton.posX, cancelButton.posY, codePicMap(25).get());
+                DrawSprite(pCancelButton->posX, pCancelButton->posY, codePicMap(25).get());
 
                 int characterX = chooseBlockIndex % MapSize;
                 int characterY = chooseBlockIndex / MapSize;
                 int remainSteps = chooseBlockIndex == -1 ? 0 : f->getUnit(characterY, characterX)->getMovePoints();
-                cout << "f: units" << endl;
-                Unit *u = new Unit(KNIGHT, true);
-                f->setUnit(5, 5, u);
-                for (int k = 0; k < MapSize; k++)
-                {
-                    for (int p = 0; p < MapSize; ++p)
-                    {
+                // debug information
+                // cout << "f: units" << endl;
+                // Unit *u = new Unit(KNIGHT, true);
+                // f->setUnit(5, 5, u);
+                // for (int k = 0; k < MapSize; k++)
+                // {
+                //     for (int p = 0; p < MapSize; ++p)
+                //     {
 
-                        cout << f->getUnit(k, p)->getType() << " ";
-                    }
-                    cout << endl;
-                }
-                cout << "f: terrains" << endl;
-                for (int k = 0; k < MapSize; k++)
-                {
-                    for (int p = 0; p < MapSize; ++p)
-                    {
-                        cout << f->getTerrain(k, p) << " ";
-                    }
-                    cout << endl;
-                }
-                cout << "blocks:" << endl;
-                for (int k = 0; k < MapSize; k++)
-                {
-                    for (int p = 0; p < MapSize; ++p)
-                    {
-                        cout << blocks[k * MapSize + p].second << " ";
-                    }
-                    cout << endl;
-                }
-                cancelButton.exist = true;
+                //         cout << f->getUnit(k, p)->getType() << " ";
+                //     }
+                //     cout << endl;
+                // }
+                // cout << "f: terrains" << endl;
+                // for (int k = 0; k < MapSize; k++)
+                // {
+                //     for (int p = 0; p < MapSize; ++p)
+                //     {
+                //         cout << f->getTerrain(k, p) << " ";
+                //     }
+                //     cout << endl;
+                // }
+                // cout << "blocks:" << endl;
+                // for (int k = 0; k < MapSize; k++)
+                // {
+                //     for (int p = 0; p < MapSize; ++p)
+                //     {
+                //         cout << blocks[k * MapSize + p].second << " ";
+                //     }
+                //     cout << endl;
+                // }
+                pCancelButton->exist = true;
                 if (no == 4 || no == -4)
                 {
                     // mage have two additional choices
@@ -344,13 +394,13 @@ public:
                     DrawString(moveStepArea.posX, moveStepArea.posY + 9 * blockSize, "UnitType" + to_string(f->getUnit(characterY, characterX)->getType()), olc::WHITE, 2u);
                     DrawString(moveStepArea.posX, moveStepArea.posY + 10 * blockSize, "LastChoose:(i,j)=" + to_string(lastChooseBlockIndex / MapSize) + "," + to_string(lastChooseBlockIndex % MapSize), olc::WHITE, 2u);
                     DrawString(moveStepArea.posX, moveStepArea.posY + 11 * blockSize, "currentChoose:(i,j)=" + to_string(chooseBlockIndex / MapSize) + "," + to_string(chooseBlockIndex % MapSize), olc::WHITE, 2u);
-                    DrawSprite(fireBall.posX, fireBall.posY, codePicMap(20).get());
-                    DrawSprite(earthquake.posX, earthquake.posY, codePicMap(21).get());
-                    DrawSprite(moveButton.posX, moveButton.posY, codePicMap(22).get()); // move
-                    moveButton.exist = true;
-                    fireBall.exist = true;
-                    earthquake.exist = true;
-                    attackButton.exist = false;
+                    DrawSprite(pFireBall->posX, pFireBall->posY, codePicMap(20).get());
+                    DrawSprite(pEarthquake->posX, pEarthquake->posY, codePicMap(21).get());
+                    DrawSprite(pMoveButton->posX, pMoveButton->posY, codePicMap(22).get()); // move
+                    pMoveButton->exist = true;
+                    pFireBall->exist = true;
+                    pEarthquake->exist = true;
+                    pAttackButton->exist = false;
                 }
                 else if (abs(no) > 0 && abs(no) < 10) // no=0: click button or other else instead of map blocks
                 {
@@ -358,19 +408,19 @@ public:
                     DrawString(moveStepArea.posX, moveStepArea.posY + 9 * blockSize, "UnitType" + to_string(f->getUnit(characterY, characterX)->getType()), olc::WHITE, 2u);
                     DrawString(moveStepArea.posX, moveStepArea.posY + 10 * blockSize, "LastChoose:(i,j)=" + to_string(lastChooseBlockIndex / MapSize) + "," + to_string(lastChooseBlockIndex % MapSize), olc::WHITE, 2u);
                     DrawString(moveStepArea.posX, moveStepArea.posY + 11 * blockSize, "currentChoose:(i,j)=" + to_string(chooseBlockIndex / MapSize) + "," + to_string(chooseBlockIndex % MapSize), olc::WHITE, 2u);
-                    DrawSprite(attackButton.posX, attackButton.posY, codePicMap(24).get()); // attack
-                    DrawSprite(moveButton.posX, moveButton.posY, codePicMap(22).get());     // move
-                    moveButton.exist = true;
-                    attackButton.exist = true;
-                    fireBall.exist = false;
-                    earthquake.exist = false;
+                    DrawSprite(pAttackButton->posX, pAttackButton->posY, codePicMap(24).get()); // attack
+                    DrawSprite(pMoveButton->posX, pMoveButton->posY, codePicMap(22).get());     // move
+                    pMoveButton->exist = true;
+                    pAttackButton->exist = true;
+                    pFireBall->exist = false;
+                    pEarthquake->exist = false;
                 }
 
                 // move & attack logic
                 // first click attack or fireball or earthquake, then click block 2
                 if (lastChooseBlockIndex != -1 && chooseBlockIndex != -1 && lastChooseBlockIndex != chooseBlockIndex)
                 {
-                    if (moveButton.clicked)
+                    if (pMoveButton->clicked)
                     {
                         // render the area can move
                         int characterX = lastChooseBlockIndex % MapSize;
@@ -378,17 +428,17 @@ public:
 
                         // move
                         f->moveUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize);
-                        moveButton.clicked = false;
+                        pMoveButton->clicked = false;
                     }
-                    else if (attackButton.clicked)
+                    else if (pAttackButton->clicked)
                     {
                         // attack
                     }
-                    else if (fireBall.clicked)
+                    else if (pFireBall->clicked)
                     {
                         // fireball
                     }
-                    else if (earthquake.clicked)
+                    else if (pEarthquake->clicked)
                     {
                         // earthquake
                     }
@@ -397,6 +447,21 @@ public:
 
                 if (chooseBlockIndex != -1)
                     lastChooseBlockIndex = chooseBlockIndex;
+                cout << "cancelButton:" << endl;
+                pCancelButton->printInfo();
+                cout << "moveButton:" << endl;
+                pMoveButton->printInfo();
+                cout << "attackButton:" << endl;
+                pAttackButton->printInfo();
+                drawDetectBox(*pCancelButton);
+                drawDetectBox(*pMoveButton);
+                drawDetectBox(*pAttackButton);
+                // drawDetectBox(fireBall);
+                // drawDetectBox(earthquake);
+                // cout<< "fireBall:"<<endl;
+                // fireBall.printInfo();
+                // cout<< "earthquake:"<<endl;
+                // earthquake.printInfo();
             }
             for (int i = 0; i < MapSize * MapSize; i++)
             {

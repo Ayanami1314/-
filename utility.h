@@ -34,6 +34,11 @@ inline int getMoveSteps(UnitType ut)
     }
     return 0;
 }
-
+// template <typename T, typename... Args>
+// void log(T first, Args... args)
+// {
+//     cout << first << endl;
+//     log(args...);
+// }
 string description(int code);
 #endif
