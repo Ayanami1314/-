@@ -34,7 +34,7 @@ public:
     };
     // Constructor
     Field(int h, int w);
-    bool moveUnit(int r0, int c0, int r, int c);
+    bool moveUnit(int r0, int c0, int r, int c, int &remainSteps);
     // Get the height and width of the field
     int getHeight() const;
     int getWidth() const;
@@ -48,11 +48,22 @@ public:
     {
         terrains[r][c] = t;
     }
-    void setUnit(int r, int c, UnitType ut, bool side)
+    void setUnit(int r, int c, UnitType ut, bool side, int movePoints = -1)
     {
-        if (units[r][c] == nullptr)
+        if (units[r][c] == nullptr && movePoints == -1)
         {
             units[r][c] = new Unit(ut, side);
+        }
+        if (units[r][c] == nullptr && movePoints != -1)
+        {
+            units[r][c] = new Unit(ut, side, movePoints);
+        }
+        if (movePoints != -1)
+        {
+            // -1: default movePoint of the Type
+            units[r][c]->setType(ut);
+            units[r][c]->setSide(side);
+            units[r][c]->setMovePoints(movePoints);
         }
         else
         {

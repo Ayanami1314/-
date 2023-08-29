@@ -159,7 +159,7 @@ ostream &operator<<(ostream &os, const Field &field)
     os << endl;
     return os;
 }
-bool Field::moveUnit(int r0, int c0, int r, int c)
+bool Field::moveUnit(int r0, int c0, int r, int c, int &remainSteps)
 {
     Unit *u = this->getUnit(r0, c0);
     if (r < 0 || r >= this->getHeight() || c < 0 || c >= this->getWidth())
@@ -172,12 +172,9 @@ bool Field::moveUnit(int r0, int c0, int r, int c)
     {
         return false;
     }
-    Unit *target = this->getUnit(r, c);
-    target->setType(u->getType());
-    target->setSide(u->getSide());
-    target->setMovePoints(u->getMovePoints() - (abs(r0 + c0 - r - c)));
-    u->setType(UNDEFINED);
-    u->setMovePoints(0);
+    this->setUnit(r, c, u->getType(), u->getSide(), u->getMovePoints() - (abs(r0 + c0 - r - c)));
+    this->setUnit(r0, c0, UNDEFINED, false);
+    remainSteps -= abs(r0 + c0 - r - c);
     return true;
 }
 

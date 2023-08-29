@@ -118,7 +118,7 @@ private:
     sideBar sbar;
     Area moveStepArea = *pMoveStepArea;
     int lastChooseBlockIndex = -1;
-    int chooseBlockIndex = -1;
+    int remainSteps = 0;
     unique_ptr<olc::Sprite> (*codePicMap)(int) = [](int code)
     {
         // mask code: 0-9 characters, 10-19 terrain, 20-39 user_input, 40-59 attached-effects
@@ -297,6 +297,9 @@ public:
         SetPixelMode(olc::Pixel::ALPHA);
         // get mouse click information
         bool clicked = false;
+
+        int characterX = 0;
+        int characterY = 0;
         if (GetMouse(0).bPressed)
         {
             int clickX = GetMouseX();
@@ -314,11 +317,11 @@ public:
         // right sideBar left & right line width: 1/30 map width, up & bottom line width: half blocksize
         // FillRect(MapSize * blockSize, 0, MapSize * blockSize / 3, MapSize * blockSize, olc::WHITE);
         // FillRect(MapSize * blockSize * 31 / 30, blockSize / 2, MapSize * blockSize * 14 / 45, MapSize * blockSize - blockSize, olc::BLACK);
-
+        int chooseBlockIndex = -1;
         if (clicked || isMapChanged(mapCache.get(), blocks.get(), MapSize * MapSize))
         {
             // only when map changed or clicked valid area rerender map
-            f->loadmap_array(blocks.get(), MapSize);
+
             Clear(olc::BLACK);
             if (clicked)
             {
@@ -350,10 +353,12 @@ public:
                 // render
                 DrawString(sbar.posX, sbar.posY, description(no), olc::WHITE, 2u);
                 DrawSprite(pCancelButton->posX, pCancelButton->posY, codePicMap(25).get());
-
-                int characterX = chooseBlockIndex % MapSize;
-                int characterY = chooseBlockIndex / MapSize;
-                int remainSteps = chooseBlockIndex == -1 ? 0 : f->getUnit(characterY, characterX)->getMovePoints();
+                characterX = chooseBlockIndex % MapSize;
+                characterY = chooseBlockIndex / MapSize;
+                if (lastChooseBlockIndex == -1)
+                    remainSteps = chooseBlockIndex == -1 ? 0 : f->getUnit(characterY, characterX)->getMovePoints();
+                else
+                    remainSteps = chooseBlockIndex == -1 ? f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getMovePoints() : f->getUnit(characterY, characterX)->getMovePoints();
                 // debug information
                 // cout << "f: units" << endl;
                 // Unit *u = new Unit(KNIGHT, true);
@@ -390,13 +395,6 @@ public:
                 {
                     // mage have two additional choices
 
-                    DrawString(moveStepArea.posX, moveStepArea.posY, "MovePoints:" + to_string(remainSteps), olc::WHITE, 2u);
-                    DrawString(moveStepArea.posX, moveStepArea.posY + 9 * blockSize, "UnitType" + to_string(f->getUnit(characterY, characterX)->getType()), olc::WHITE, 2u);
-                    DrawString(moveStepArea.posX, moveStepArea.posY + 10 * blockSize, "LastChoose:(i,j)=" + to_string(lastChooseBlockIndex / MapSize) + "," + to_string(lastChooseBlockIndex % MapSize), olc::WHITE, 2u);
-                    DrawString(moveStepArea.posX, moveStepArea.posY + 11 * blockSize, "currentChoose:(i,j)=" + to_string(chooseBlockIndex / MapSize) + "," + to_string(chooseBlockIndex % MapSize), olc::WHITE, 2u);
-                    DrawSprite(pFireBall->posX, pFireBall->posY, codePicMap(20).get());
-                    DrawSprite(pEarthquake->posX, pEarthquake->posY, codePicMap(21).get());
-                    DrawSprite(pMoveButton->posX, pMoveButton->posY, codePicMap(22).get()); // move
                     pMoveButton->exist = true;
                     pFireBall->exist = true;
                     pEarthquake->exist = true;
@@ -404,12 +402,6 @@ public:
                 }
                 else if (abs(no) > 0 && abs(no) < 10) // no=0: click button or other else instead of map blocks
                 {
-                    DrawString(moveStepArea.posX, moveStepArea.posY, "MovePoints:" + to_string(remainSteps), olc::WHITE, 2u);
-                    DrawString(moveStepArea.posX, moveStepArea.posY + 9 * blockSize, "UnitType" + to_string(f->getUnit(characterY, characterX)->getType()), olc::WHITE, 2u);
-                    DrawString(moveStepArea.posX, moveStepArea.posY + 10 * blockSize, "LastChoose:(i,j)=" + to_string(lastChooseBlockIndex / MapSize) + "," + to_string(lastChooseBlockIndex % MapSize), olc::WHITE, 2u);
-                    DrawString(moveStepArea.posX, moveStepArea.posY + 11 * blockSize, "currentChoose:(i,j)=" + to_string(chooseBlockIndex / MapSize) + "," + to_string(chooseBlockIndex % MapSize), olc::WHITE, 2u);
-                    DrawSprite(pAttackButton->posX, pAttackButton->posY, codePicMap(24).get()); // attack
-                    DrawSprite(pMoveButton->posX, pMoveButton->posY, codePicMap(22).get());     // move
                     pMoveButton->exist = true;
                     pAttackButton->exist = true;
                     pFireBall->exist = false;
@@ -423,11 +415,12 @@ public:
                     if (pMoveButton->clicked)
                     {
                         // render the area can move
-                        int characterX = lastChooseBlockIndex % MapSize;
-                        int characterY = lastChooseBlockIndex / MapSize;
-
+                        characterX = lastChooseBlockIndex % MapSize;
+                        characterY = lastChooseBlockIndex / MapSize;
                         // move
-                        f->moveUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize);
+                        cout << "before move: point = " << remainSteps << endl;
+                        f->moveUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize, remainSteps);
+                        cout << "before move: point = " << remainSteps << endl;
                         pMoveButton->clicked = false;
                     }
                     else if (pAttackButton->clicked)
@@ -462,7 +455,14 @@ public:
                 // fireBall.printInfo();
                 // cout<< "earthquake:"<<endl;
                 // earthquake.printInfo();
+
+                // clear onClick
+                for (int i = 0; i < MapSize * MapSize; ++i)
+                {
+                    onClick[i] = 0;
+                }
             }
+            // render map
             for (int i = 0; i < MapSize * MapSize; i++)
             {
                 // + 2, leave some space for title
@@ -474,50 +474,66 @@ public:
                 if (blocks[i].second != 0)
                 {
                     DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(blocks[i].second).get());
-                    if (onClick[i] != 0)
-                    {
-                        DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(23).get());
-                    }
                 }
             }
+            if (lastChooseBlockIndex != -1)
+                DrawSprite(olc::vi2d(lastChooseBlockIndex % MapSize, lastChooseBlockIndex / MapSize + 2) * blockSize, codePicMap(23).get());
             // layer 2(if exist)
-            if (chooseBlockIndex != -1 || lastChooseBlockIndex != -1)
+            bool flag = (chooseBlockIndex != -1 && isCharacter(blocks[chooseBlockIndex].second)) || (lastChooseBlockIndex != -1 && isCharacter(blocks[lastChooseBlockIndex].second));
+            if (chooseBlockIndex != -1 || lastChooseBlockIndex != -1 && flag)
             {
                 // choose picture
                 // draw in picture 1
                 int renderChooseIndex = chooseBlockIndex != -1 ? chooseBlockIndex : lastChooseBlockIndex;
-                int characterX = renderChooseIndex % MapSize;
-                int characterY = renderChooseIndex / MapSize;
+                int render_X = renderChooseIndex % MapSize;
+                int render_Y = renderChooseIndex / MapSize;
                 // row: Y, col:X
-                int MovePoints = renderChooseIndex == -1 ? 0 : f->getUnit(characterY, characterX)->getMovePoints();
-                std::cout << f->getUnit(characterY, characterX)->getType() << endl;
-                int start_i = max(0, characterX - MovePoints);
-                int start_j = max(0, characterY - MovePoints);
-                int end_i = min(MapSize - 1, characterX + MovePoints);
-                int end_j = min(MapSize - 1, characterY + MovePoints);
+                int MovePoints = remainSteps;
+                std::cout << f->getUnit(render_Y, render_X)->getType() << endl;
+                // int start_i = max(0, render_X - MovePoints);
+                // int start_j = max(0, render_Y - MovePoints);
+                // int end_i = min(MapSize - 1, render_X + MovePoints);
+                // int end_j = min(MapSize - 1, render_Y + MovePoints);
                 olc::Pixel p_alpha_yellow = olc::YELLOW;
                 p_alpha_yellow.a = 128;
-                SetPixelMode(olc::Pixel::ALPHA);
+                // SetPixelMode(olc::Pixel::ALPHA);
                 // SetLayerTint(1, olc::Pixel(0, 0, 0, 128)); // clear layer 1
                 // secondLayer is layer 1, first is 0;
-                SetDrawTarget(1); // draw to layer 1
-                for (int i = start_i; i <= end_i; i++)
+                // SetDrawTarget(1); // draw to layer 1
+
+                cout << "render center:(row, col) = " << olc::vi2d(render_Y, render_X) << endl;
+                for (int i = 0; i < MapSize; i++) // i, x, col
                 {
-                    for (int j = start_j; j < end_j; j++)
+                    for (int j = 0; j < MapSize; j++) // j, y, row
                     {
-                        pair<int, int> typecode = blocks[renderChooseIndex];
-                        if (m_dis(characterX, characterY, i, j) <= MovePoints && f->canOver(i, j) && typecode.second == 0)
+                        pair<int, int> typecode = blocks[i + j * MapSize];
+                        if (m_dis(render_X, render_Y, i, j) <= MovePoints && f->canOver(j, i) && !isCharacter(typecode.second))
                         {
                             // isn't unreachable area and other unit
+                            cout << "render! (" << i << "," << j << " )" << endl;
                             FillRect(i * blockSize, (j + 2) * blockSize, blockSize, blockSize, p_alpha_yellow);
                         }
                     }
                 }
-                SetDrawTarget(0, true); // draw to layer 0, return
-                EnableLayer(1, true);
+                // SetDrawTarget(0, true); // draw to layer 0, return
+                // EnableLayer(1, true);
             }
+            // render sidebar
+
+            DrawString(moveStepArea.posX, moveStepArea.posY, "MovePoints:" + to_string(remainSteps), olc::WHITE, 2u);
+            DrawString(moveStepArea.posX, moveStepArea.posY + 9 * blockSize, "UnitType" + (characterX == -1 || characterY == -1) ? "UNDEFINED" : to_string(f->getUnit(characterY, characterX)->getType()), olc::WHITE, 2u);
+            DrawString(moveStepArea.posX, moveStepArea.posY + 10 * blockSize, "LastChoose:(i,j)=" + to_string(lastChooseBlockIndex / MapSize) + "," + to_string(lastChooseBlockIndex % MapSize), olc::WHITE, 2u);
+            DrawString(moveStepArea.posX, moveStepArea.posY + 11 * blockSize, "currentChoose:(i,j)=" + to_string(chooseBlockIndex / MapSize) + "," + to_string(chooseBlockIndex % MapSize), olc::WHITE, 2u);
+            if (pFireBall->exist)
+                DrawSprite(pFireBall->posX, pFireBall->posY, codePicMap(20).get());
+            if (pEarthquake->exist)
+                DrawSprite(pEarthquake->posX, pEarthquake->posY, codePicMap(21).get());
+            if (pMoveButton->exist)
+                DrawSprite(pMoveButton->posX, pMoveButton->posY, codePicMap(22).get()); // move
+            if (pAttackButton->exist)
+                DrawSprite(pAttackButton->posX, pAttackButton->posY, codePicMap(24).get()); // attack
             arrayCopy(blocks.get(), mapCache.get(), MapSize * MapSize);
-            f->loadmap_array(blocks.get(), MapSize);
+            // f->loadmap_array(blocks.get(), MapSize);  It should be array load field, instead of field load array
         }
 
         return true;

@@ -33,9 +33,13 @@ public:
             this->MovePoints = 2;
             break;
         default:
-            this->MovePoints = 1;
+            this->MovePoints = 0;
             break;
         }
+    }
+    Unit(UnitType u, bool sd, int mp) : type(u), side(sd), MovePoints(mp)
+    {
+        ;
     }
     Unit(const Unit &u)
     {
@@ -47,7 +51,7 @@ public:
     {
         type = UNDEFINED;
         side = false;
-        MovePoints = 1;
+        MovePoints = 0;
     }
     // friend Field *loadmap(std::istream &is);
     UnitType getType() const
@@ -87,7 +91,7 @@ public:
             this->MovePoints = 2;
             break;
         default:
-            this->MovePoints = 1;
+            this->MovePoints = 0;
             break;
         }
     }

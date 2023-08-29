@@ -130,7 +130,8 @@ void GameLogic(string line, Field *f, bool side)
         }
         if (energy >= cost && f->inBounds(r + dx, c + dy))
         {
-            f->moveUnit(r, c, r + dx, c + dy);
+            int something = 0; // doesn't matter in console version
+            f->moveUnit(r, c, r + dx, c + dy, something);
             energy -= cost;
             r += dx;
             c += dy;
