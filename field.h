@@ -3,6 +3,7 @@
 
 #include <ostream>
 #include "grid.h"
+#include "units.h"
 using std::pair;
 /* Terrains */
 enum Terrain
@@ -14,7 +15,6 @@ enum Terrain
     ABYSS,
     ONFIRE
 };
-
 // Forward declaration of the class of units
 class Unit;
 /* Battle field */
@@ -30,7 +30,7 @@ public:
     void updateArray(pair<int, int> *mapArray, int size);
     bool canOver(int r, int c) const
     {
-        return this->terrains[r][c] != WATER && this->terrains[r][c] != MOUNTAIN && this->terrains[r][c] != ABYSS;
+        return this->terrains[r][c] != WATER && this->terrains[r][c] != MOUNTAIN && this->terrains[r][c] != ABYSS && this->terrains[r][c] != ONFIRE;
     };
     // Constructor
     Field(int h, int w);
@@ -47,6 +47,19 @@ public:
     void setTerrain(int r, int c, Terrain t)
     {
         terrains[r][c] = t;
+    }
+    void setUnit(int r, int c, UnitType ut, bool side)
+    {
+        if (units[r][c] == nullptr)
+        {
+            units[r][c] = new Unit(ut, side);
+        }
+        else
+        {
+            units[r][c]->setType(ut);
+            units[r][c]->setSide(side);
+            units[r][c]->setMovePointsByType(ut);
+        }
     }
     void setUnit(int r, int c, Unit *u)
     {

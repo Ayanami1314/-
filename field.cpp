@@ -13,6 +13,15 @@ Field::Field(int h, int w)
     : units(h, w), terrains(h, w)
 {
     assert(h > 0 && h <= 20 && w > 0 && w <= 20);
+    // units.fill(new Unit());  THE SOURCE OF ERROR!!!!!!!!! fill() only copy the value, which means A pointer!!!!!
+    for (int i = 0; i < h; i++)
+    {
+        for (int j = 0; j < w; j++)
+        {
+            units[i][j] = new Unit();
+        }
+    }
+    terrains.fill(Terrain::PLAIN);
 }
 
 // Get the height of the field
@@ -157,10 +166,18 @@ bool Field::moveUnit(int r0, int c0, int r, int c)
         return false;
     if (this->getUnit(r, c)->getType() != UNDEFINED)
         return false;
+    if (!canOver(r, c))
+        return false;
+    if (abs(r0 + c0 - r - c) > u->getMovePoints())
+    {
+        return false;
+    }
     Unit *target = this->getUnit(r, c);
     target->setType(u->getType());
     target->setSide(u->getSide());
+    target->setMovePoints(u->getMovePoints() - (abs(r0 + c0 - r - c)));
     u->setType(UNDEFINED);
+    u->setMovePoints(0);
     return true;
 }
 
@@ -185,33 +202,33 @@ void Field::loadmap_array(pair<int, int> *map, int mapSize)
         {
             switch (map[i * mapSize + j].second)
             {
-            // true: red, false: blue
+                // true: red, false: blue
             case 1:
-                this->units[i][j] = new Unit(FOOTMAN, true);
+                this->setUnit(i, j, FOOTMAN, true);
                 break;
             case 2:
-                this->units[i][j] = new Unit(KNIGHT, true);
+                this->setUnit(i, j, KNIGHT, true);
                 break;
             case 3:
-                this->units[i][j] = new Unit(ARCHER, true);
+                this->setUnit(i, j, ARCHER, true);
                 break;
             case 4:
-                this->units[i][j] = new Unit(MAGE, true);
+                this->setUnit(i, j, MAGE, true);
                 break;
             case -1:
-                this->units[i][j] = new Unit(FOOTMAN, false);
+                this->setUnit(i, j, FOOTMAN, false);
                 break;
             case -2:
-                this->units[i][j] = new Unit(KNIGHT, false);
+                this->setUnit(i, j, KNIGHT, false);
                 break;
             case -3:
-                this->units[i][j] = new Unit(ARCHER, false);
+                this->setUnit(i, j, ARCHER, false);
                 break;
             case -4:
-                this->units[i][j] = new Unit(MAGE, false);
+                this->setUnit(i, j, MAGE, false);
                 break;
             default:
-                this->units[i][j] = new Unit(UNDEFINED, false);
+                this->setUnit(i, j, UNDEFINED, false);
                 break;
             }
             switch (map[i * mapSize + j].first)

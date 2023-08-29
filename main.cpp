@@ -14,7 +14,28 @@
 #include "olcPixelGameEngine.h"
 #include "utility.h"
 using namespace std;
-class clickButton
+class Area
+{
+public:
+    int posX;
+    int posY;
+    int width;
+    int height;
+    bool in(int x, int y)
+    {
+        return x >= posX && x <= posX + width && y >= posY && y <= posY + height;
+    }
+    Area() = default;
+    ~Area() = default;
+    Area(int x, int y, int w, int h)
+    {
+        posX = x;
+        posY = y;
+        width = w;
+        height = h;
+    }
+};
+class clickButton : public Area
 {
 public:
     int posX;
@@ -23,10 +44,7 @@ public:
     int height;
     bool clicked = false;
     bool exist = false;
-    bool in(int x, int y)
-    {
-        return x >= posX && x <= posX + width && y >= posY && y <= posY + height;
-    }
+
     clickButton(int x, int y, int w, int h, bool c = false)
     {
         posX = x;
@@ -69,8 +87,9 @@ private:
     clickButton earthquake;
     clickButton cancelButton;
     sideBar sbar;
+    Area moveStepArea;
     int lastChooseBlockIndex = -1;
-
+    int chooseBlockIndex = -1;
     unique_ptr<olc::Sprite> (*codePicMap)(int) = [](int code)
     {
         // mask code: 0-9 characters, 10-19 terrain, 20-39 user_input, 40-59 attached-effects
@@ -94,7 +113,7 @@ private:
         std::unique_ptr<olc::Sprite> fire = make_unique<olc::Sprite>("./vector_icon_resized/fire.png");
         std::unique_ptr<olc::Sprite> fireball = make_unique<olc::Sprite>("./vector_icon_resized/fire-zone.png");
         std::unique_ptr<olc::Sprite> earthquake = make_unique<olc::Sprite>("./vector_icon_resized/earth-spit.png");
-        std::unique_ptr<olc::Sprite> choice_arrow = make_unique<olc::Sprite>("./vector_icon_resized/crosshair.png");
+        std::unique_ptr<olc::Sprite> choice_arrow = make_unique<olc::Sprite>("./vector_icon_resized_alpha/crosshair.png");
         std::unique_ptr<olc::Sprite> move_arrow = make_unique<olc::Sprite>("./vector_icon_resized/move.png");
         std::unique_ptr<olc::Sprite> attack = make_unique<olc::Sprite>("./vector_icon_resized/knife-thrust.png");
         std::unique_ptr<olc::Sprite> map = make_unique<olc::Sprite>("./vector_icon_resized/plain-square.png");
@@ -181,7 +200,6 @@ public:
         loadSmallMap(blocks);
         loadEmptyMap(mapCache, MapSize);
         f->loadmap_array(blocks.get(), MapSize);
-        SetPixelMode(olc::Pixel::MASK);
         Clear(olc::BLACK);
         onClick.resize(MapSize * MapSize);
         onClick.assign(MapSize * MapSize, 0);
@@ -196,6 +214,8 @@ public:
         sbar.posY = sideBarLeftTopY;
         sbar.height = MapSize * blockSize;
         sbar.width = MapSize * blockSize / 3;
+        moveStepArea = Area(sideBarLeftTopX, sideBarLeftTopY + blockSize, 2 * blockSize, blockSize);
+        CreateLayer(); // create second layer
         return true;
     }
     bool whichBlockClicked(int x, int y, int upReserved = 2)
@@ -230,6 +250,7 @@ public:
     }
     bool OnUserUpdate(float fElapsedTime) override
     {
+        SetPixelMode(olc::Pixel::ALPHA);
         // get mouse click information
         bool clicked = false;
         if (GetMouse(0).bPressed)
@@ -248,6 +269,7 @@ public:
         if (clicked || isMapChanged(mapCache.get(), blocks.get(), MapSize * MapSize))
         {
             // only when map changed or clicked valid area rerender map
+            f->loadmap_array(blocks.get(), MapSize);
             Clear(olc::BLACK);
             if (clicked)
             {
@@ -263,10 +285,10 @@ public:
                         onClick[i] = 0;
                     }
                     lastChooseBlockIndex = -1;
+                    chooseBlockIndex = -1;
                     cancelButton.clicked = false;
                 }
                 int no = 0;
-                int chooseBlockIndex = -1;
                 for (int i = 0; i < MapSize * MapSize; ++i)
                 {
                     if (onClick[i] != 0)
@@ -279,10 +301,49 @@ public:
                 // render
                 DrawString(sbar.posX, sbar.posY, description(no), olc::WHITE, 2u);
                 DrawSprite(cancelButton.posX, cancelButton.posY, codePicMap(25).get());
+
+                int characterX = chooseBlockIndex % MapSize;
+                int characterY = chooseBlockIndex / MapSize;
+                int remainSteps = chooseBlockIndex == -1 ? 0 : f->getUnit(characterY, characterX)->getMovePoints();
+                cout << "f: units" << endl;
+                Unit *u = new Unit(KNIGHT, true);
+                f->setUnit(5, 5, u);
+                for (int k = 0; k < MapSize; k++)
+                {
+                    for (int p = 0; p < MapSize; ++p)
+                    {
+
+                        cout << f->getUnit(k, p)->getType() << " ";
+                    }
+                    cout << endl;
+                }
+                cout << "f: terrains" << endl;
+                for (int k = 0; k < MapSize; k++)
+                {
+                    for (int p = 0; p < MapSize; ++p)
+                    {
+                        cout << f->getTerrain(k, p) << " ";
+                    }
+                    cout << endl;
+                }
+                cout << "blocks:" << endl;
+                for (int k = 0; k < MapSize; k++)
+                {
+                    for (int p = 0; p < MapSize; ++p)
+                    {
+                        cout << blocks[k * MapSize + p].second << " ";
+                    }
+                    cout << endl;
+                }
                 cancelButton.exist = true;
                 if (no == 4 || no == -4)
                 {
                     // mage have two additional choices
+
+                    DrawString(moveStepArea.posX, moveStepArea.posY, "MovePoints:" + to_string(remainSteps), olc::WHITE, 2u);
+                    DrawString(moveStepArea.posX, moveStepArea.posY + 9 * blockSize, "UnitType" + to_string(f->getUnit(characterY, characterX)->getType()), olc::WHITE, 2u);
+                    DrawString(moveStepArea.posX, moveStepArea.posY + 10 * blockSize, "LastChoose:(i,j)=" + to_string(lastChooseBlockIndex / MapSize) + "," + to_string(lastChooseBlockIndex % MapSize), olc::WHITE, 2u);
+                    DrawString(moveStepArea.posX, moveStepArea.posY + 11 * blockSize, "currentChoose:(i,j)=" + to_string(chooseBlockIndex / MapSize) + "," + to_string(chooseBlockIndex % MapSize), olc::WHITE, 2u);
                     DrawSprite(fireBall.posX, fireBall.posY, codePicMap(20).get());
                     DrawSprite(earthquake.posX, earthquake.posY, codePicMap(21).get());
                     DrawSprite(moveButton.posX, moveButton.posY, codePicMap(22).get()); // move
@@ -293,6 +354,10 @@ public:
                 }
                 else if (abs(no) > 0 && abs(no) < 10) // no=0: click button or other else instead of map blocks
                 {
+                    DrawString(moveStepArea.posX, moveStepArea.posY, "MovePoints:" + to_string(remainSteps), olc::WHITE, 2u);
+                    DrawString(moveStepArea.posX, moveStepArea.posY + 9 * blockSize, "UnitType" + to_string(f->getUnit(characterY, characterX)->getType()), olc::WHITE, 2u);
+                    DrawString(moveStepArea.posX, moveStepArea.posY + 10 * blockSize, "LastChoose:(i,j)=" + to_string(lastChooseBlockIndex / MapSize) + "," + to_string(lastChooseBlockIndex % MapSize), olc::WHITE, 2u);
+                    DrawString(moveStepArea.posX, moveStepArea.posY + 11 * blockSize, "currentChoose:(i,j)=" + to_string(chooseBlockIndex / MapSize) + "," + to_string(chooseBlockIndex % MapSize), olc::WHITE, 2u);
                     DrawSprite(attackButton.posX, attackButton.posY, codePicMap(24).get()); // attack
                     DrawSprite(moveButton.posX, moveButton.posY, codePicMap(22).get());     // move
                     moveButton.exist = true;
@@ -303,21 +368,27 @@ public:
 
                 // move & attack logic
                 // first click attack or fireball or earthquake, then click block 2
-                if (lastChooseBlockIndex != -1 && chooseBlockIndex != -1)
+                if (lastChooseBlockIndex != -1 && chooseBlockIndex != -1 && lastChooseBlockIndex != chooseBlockIndex)
                 {
                     if (moveButton.clicked)
                     {
+                        // render the area can move
+                        int characterX = lastChooseBlockIndex % MapSize;
+                        int characterY = lastChooseBlockIndex / MapSize;
+
                         // move
+                        f->moveUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize);
+                        moveButton.clicked = false;
                     }
-                    if (attackButton.clicked)
+                    else if (attackButton.clicked)
                     {
                         // attack
                     }
-                    if (fireBall.clicked)
+                    else if (fireBall.clicked)
                     {
                         // fireball
                     }
-                    if (earthquake.clicked)
+                    else if (earthquake.clicked)
                     {
                         // earthquake
                     }
@@ -332,19 +403,56 @@ public:
                 // + 2, leave some space for title
                 // x: col, y: row, in map index, (r, c) -> (y, x)
                 // i: row*MapSize + col, x = i % MapSize, y = 2 + i / MapSize
+
+                // layer 1:
                 DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(blocks[i].first).get());
                 if (blocks[i].second != 0)
                 {
                     DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(blocks[i].second).get());
-                }
-
-                if (onClick[i] != 0)
-                {
-                    // choose picture
-                    DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(23).get());
+                    if (onClick[i] != 0)
+                    {
+                        DrawSprite(olc::vi2d(i % MapSize, i / MapSize + 2) * blockSize, codePicMap(23).get());
+                    }
                 }
             }
+            // layer 2(if exist)
+            if (chooseBlockIndex != -1 || lastChooseBlockIndex != -1)
+            {
+                // choose picture
+                // draw in picture 1
+                int renderChooseIndex = chooseBlockIndex != -1 ? chooseBlockIndex : lastChooseBlockIndex;
+                int characterX = renderChooseIndex % MapSize;
+                int characterY = renderChooseIndex / MapSize;
+                // row: Y, col:X
+                int MovePoints = renderChooseIndex == -1 ? 0 : f->getUnit(characterY, characterX)->getMovePoints();
+                std::cout << f->getUnit(characterY, characterX)->getType() << endl;
+                int start_i = max(0, characterX - MovePoints);
+                int start_j = max(0, characterY - MovePoints);
+                int end_i = min(MapSize - 1, characterX + MovePoints);
+                int end_j = min(MapSize - 1, characterY + MovePoints);
+                olc::Pixel p_alpha_yellow = olc::YELLOW;
+                p_alpha_yellow.a = 128;
+                SetPixelMode(olc::Pixel::ALPHA);
+                // SetLayerTint(1, olc::Pixel(0, 0, 0, 128)); // clear layer 1
+                // secondLayer is layer 1, first is 0;
+                SetDrawTarget(1); // draw to layer 1
+                for (int i = start_i; i <= end_i; i++)
+                {
+                    for (int j = start_j; j < end_j; j++)
+                    {
+                        pair<int, int> typecode = blocks[renderChooseIndex];
+                        if (m_dis(characterX, characterY, i, j) <= MovePoints && f->canOver(i, j) && typecode.second == 0)
+                        {
+                            // isn't unreachable area and other unit
+                            FillRect(i * blockSize, (j + 2) * blockSize, blockSize, blockSize, p_alpha_yellow);
+                        }
+                    }
+                }
+                SetDrawTarget(0, true); // draw to layer 0, return
+                EnableLayer(1, true);
+            }
             arrayCopy(blocks.get(), mapCache.get(), MapSize * MapSize);
+            f->loadmap_array(blocks.get(), MapSize);
         }
 
         return true;
