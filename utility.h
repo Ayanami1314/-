@@ -3,8 +3,10 @@
 #include <memory>
 #include "units.h"
 using namespace std;
+void loadSmallTestMap(unique_ptr<pair<int, int>[]> &map);
 void loadSmallMap(unique_ptr<pair<int, int>[]> &map);
 void loadEmptyMap(unique_ptr<pair<int, int>[]> &map, int mapSize);
+void loadEmptyRedWinMap(unique_ptr<pair<int, int>[]> &map, int mapSize);
 bool isMapChanged(pair<int, int> *oldMap, pair<int, int> *newMap, int size);
 void arrayCopy(pair<int, int> *source, pair<int, int> *target, int size);
 int m_dis(int x0, int y0, int x1, int y1);

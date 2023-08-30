@@ -2,7 +2,7 @@
 #include <memory>
 #include "units.h"
 #include <string>
-void loadSmallMap(unique_ptr<pair<int, int>[]> &map)
+void loadSmallTestMap(unique_ptr<pair<int, int>[]> &map)
 {
     int size = 9;
     for (int i = 0; i < size * size; i++)
@@ -30,11 +30,41 @@ void loadSmallMap(unique_ptr<pair<int, int>[]> &map)
     map[7 * size + 7].second = -1; // blue ft
     for (int i = 0; i < 3; i++)
     {
-        map[6 * size + 3 + i].first = 14; // forest
+        map[7 * size + 3 + i].first = 14; // forest
     }
     map[6 * size + 1].first = 12; // moutain
     map[6 * size + 7].first = 12; // moutain
     map[5 * size + 5].second = 4; // test mage
+}
+void loadSmallMap(unique_ptr<pair<int, int>[]> &map)
+{
+    //    0  1  2  3  4  5  6  7  8
+    //   +--+--+--+--+--+--+--+--+--+
+    //  0|MG|  |  |  |KN|  |  |  |  |
+    //   +--+--+--+--+--+--+--+--+--+
+    //  1|  |FT|  |$ |$ |$ |  |FT|  |
+    //   +--+--+--+--+--+--+--+--+--+
+    //  2|  |/\|  |  |AR|  |  |/\|  |
+    //   +--+--+--+--+--+--+--+--+--+
+    //  3|  |  |  |  |  |  |  |  |  |
+    //   +--+--+--+--+--+--+--+--+--+
+    //  4|~~|  |~~|~~|  |~~|~~|  |~~|
+    //   +--+--+--+--+--+--+--+--+--+
+    //  5|  |  |  |  |  |  |  |  |  |
+    //   +--+--+--+--+--+--+--+--+--+
+    //  6|  |/\|  |  |ar|  |  |/\|  |
+    //   +--+--+--+--+--+--+--+--+--+
+    //  7|  |ft|  |$ |$ |$ |  |ft|  |
+    //   +--+--+--+--+--+--+--+--+--+
+    //  8|  |  |  |  |kn|  |  |  |mg|
+    //   +--+--+--+--+--+--+--+--+--+
+    int size = 9;
+    loadSmallTestMap(map);
+    map[5 * size + 5].second = 0; // test mage disappeared
+    map[0].second = 4;
+    map[size * size - 1].second = -4;
+    map[2 * size + 4].second = 3;
+    map[6 * size + 4].second = -3;
 }
 void loadEmptyMap(unique_ptr<pair<int, int>[]> &map, int mapSize)
 {
@@ -43,6 +73,15 @@ void loadEmptyMap(unique_ptr<pair<int, int>[]> &map, int mapSize)
         map[i].first = 10;
         map[i].second = 0;
     }
+}
+void loadEmptyRedWinMap(unique_ptr<pair<int, int>[]> &map, int mapSize)
+{
+    for (int i = 0; i < mapSize; ++i)
+    {
+        map[i].first = 10;
+        map[i].second = 0;
+    }
+    map[0].second = 1;
 }
 bool isMapChanged(pair<int, int> *oldMap, pair<int, int> *newMap, int size)
 {

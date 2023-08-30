@@ -236,6 +236,9 @@ public:
     }
     bool OnUserCreate() override
     {
+        // loadSmallTestMap(blocks);
+        //
+        // loadEmptyRedWinMap(blocks, MapSize);
         loadSmallMap(blocks);
         loadEmptyMap(mapCache, MapSize);
         f->loadmap_array(blocks.get(), MapSize);
@@ -350,6 +353,13 @@ public:
         {
             // only when map changed or clicked valid area rerender map
             Clear(olc::BLACK);
+            if (isGameOver(*f))
+            {
+                DrawString(ScreenWidth() / 4, ScreenHeight() * 1 / 4, "Game Over!", olc::WHITE, 5u);
+                string winner = whoWin(*f) == 1 ? "Red Player" : "Blue Player";
+                DrawString(ScreenWidth() / 4, ScreenHeight() * 1 / 2, winner + " wins!", olc::WHITE, 5u);
+                return true;
+            }
             if (clicked)
             {
                 cout << "onClick remainSteps:" << remainSteps << endl;
