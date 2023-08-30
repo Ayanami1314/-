@@ -58,3 +58,23 @@ bool whichBlockChoose()
 
 
 
+
+
+第一次更新：
+
+一堆“按钮”（状态）蛮笨重的。
+
+其实感觉还有种写法是设置一个输入栈，将鼠标点击分成 棋盘选中和各个按钮 这些类型
+
+例如移动  pos1--> 移动按钮-->pos2
+
+这个逻辑可以变成：移动按钮入栈时，等待下一个入栈的棋盘选中，之后不断pop直到按钮前栈中的第一个棋盘选中，移动
+
+
+
+状态的一大坏处就是会丢失时间序列信息，只能在代码之中弄出对应的时间序列信息，对多对象、复杂逻辑比较无力
+
+
+
+（项目中用状态实现move的奇技淫巧：存一个长期的lastClick，每次点击棋盘更新时将lastClick和currentClick同步，由于move键在棋盘外，所以点击move不会改变lastClick。 只有当lastClick 和 moveButton.clicked ==true时，才move到currentClick。如果先点其他地方，lastClick会和currentClick同步，无法”实质上避免“ pos1-->pos2-->buttonclick这种可能性，但是这样会自己移动到自己的位置，实际无影响）
+

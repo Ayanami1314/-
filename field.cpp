@@ -161,6 +161,7 @@ ostream &operator<<(ostream &os, const Field &field)
 }
 bool Field::moveUnit(int r0, int c0, int r, int c, int &remainSteps)
 {
+
     Unit *u = this->getUnit(r0, c0);
     if (r < 0 || r >= this->getHeight() || c < 0 || c >= this->getWidth())
         return false;
@@ -168,14 +169,98 @@ bool Field::moveUnit(int r0, int c0, int r, int c, int &remainSteps)
         return false;
     if (!canOver(r, c))
         return false;
-    if (abs(r0 + c0 - r - c) > u->getMovePoints())
+    // bfs
+    deque<pair<int, int>> q;
+    q.push_back(make_pair(r0, c0));
+    vector<vector<bool>> visited(this->getHeight(), vector<bool>(this->getWidth(), false));
+    visited[r0][c0] = true;
+    int INF = 100000000;
+    vector<vector<int>> distance(this->getHeight(), vector<int>(this->getWidth(), INF));
+    distance[r0][c0] = 0;
+    int directions[4][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+    while (!q.empty())
     {
+        pair<int, int> p = q.front();
+        q.pop_front();
+        for (int i = 0; i < 4; i++)
+        {
+            int nr = p.first + directions[i][0];
+            int nc = p.second + directions[i][1];
+            if (nr >= 0 && nr < this->getHeight() && nc >= 0 && nc < this->getWidth() && !visited[nr][nc] && this->canOver(nr, nc))
+            {
+                q.push_back(make_pair(nr, nc));
+                visited[nr][nc] = true;
+                distance[nr][nc] = distance[p.first][p.second] + 1;
+            }
+        }
+        if (distance[p.first][p.second] != INF && distance[p.first][p.second] > remainSteps)
+        {
+            cout << "remainSteps:" << remainSteps << endl;
+            break;
+        }
+    }
+    cout << "distance" << endl;
+    for (int i = 0; i < this->getHeight(); i++)
+    {
+        for (int j = 0; j < this->getWidth(); j++)
+        {
+            if (distance[i][j] == INF)
+            {
+                cout << "I ";
+            }
+            else
+            {
+                cout << distance[i][j] << " ";
+            }
+        }
+        cout << endl;
+    }
+    if (remainSteps < distance[r][c])
+    {
+        cout << "can't move!" << endl;
         return false;
     }
-    this->setUnit(r, c, u->getType(), u->getSide(), u->getMovePoints() - (abs(r0 + c0 - r - c)));
+    this->setUnit(r, c, u->getType(), u->getSide(), u->getMovePoints() - distance[r][c]);
     this->setUnit(r0, c0, UNDEFINED, false);
-    remainSteps -= abs(r0 + c0 - r - c);
+    remainSteps -= distance[r][c];
     return true;
+}
+vector<pair<int, int>> Field::getCanMoveBlocks(int r0, int c0, int remainSteps)
+{
+    deque<pair<int, int>> q;
+    q.push_back(make_pair(r0, c0));
+    vector<vector<bool>> visited(this->getHeight(), vector<bool>(this->getWidth(), false));
+    visited[r0][c0] = true;
+    int INF = 100000000;
+    vector<vector<int>> distance(this->getHeight(), vector<int>(this->getWidth(), INF));
+    distance[r0][c0] = 0;
+    int directions[4][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+    vector<pair<int, int>> canMoveBlocks;
+    while (!q.empty())
+    {
+        pair<int, int> p = q.front();
+        q.pop_front();
+        for (int i = 0; i < 4; i++)
+        {
+            int nr = p.first + directions[i][0];
+            int nc = p.second + directions[i][1];
+            if (nr >= 0 && nr < this->getHeight() && nc >= 0 && nc < this->getWidth() && !visited[nr][nc] && this->canOver(nr, nc))
+            {
+                q.push_back(make_pair(nr, nc));
+                visited[nr][nc] = true;
+                distance[nr][nc] = distance[p.first][p.second] + 1;
+            }
+        }
+        if (distance[p.first][p.second] <= remainSteps)
+        {
+            canMoveBlocks.push_back(p);
+        }
+        else if (distance[p.first][p.second] != INF)
+        {
+            break;
+        }
+    }
+    return canMoveBlocks;
 }
 
 bool Field::inBounds(int row, int col) const
@@ -324,4 +409,98 @@ void Field::updateArray(pair<int, int> *mapArray, int size)
             mapArray[i * size + j].second = reverseMapUnit(this->getUnit(i, j));
         }
     }
+}
+bool Field::attack(int r0, int c0, int r, int c, int &remainSteps)
+{
+    int MapHeight = this->getHeight();
+    int MapWidth = this->getWidth();
+    vector<pair<int, int>> canAtkBlocks = getCanAttackBlocks(r0, c0);
+    if (canAtkBlocks.size() == 0)
+    {
+        return false;
+    }
+    UnitType ut = this->getUnit(r0, c0)->getType();
+    bool sd = this->getUnit(r0, c0)->getSide();
+    for (auto &p : canAtkBlocks)
+    {
+        if (p.first == r && p.second == c)
+        {
+            remainSteps = 0;
+            this->setUnit(r0, c0, ut, sd, 0);        // clear the movePoints
+            this->setUnit(r, c, UNDEFINED, true, 0); // kill the target unit
+            return true;
+        }
+    }
+    return false;
+}
+vector<pair<int, int>> Field::getCanAttackBlocks(int r0, int c0)
+{
+    vector<pair<int, int>> directions;
+    vector<pair<int, int>> canAttackBlocks;
+    // directions: pair<direction, distance>, direction is 1~9, distance is 1, 2,...
+    // 1 2 3
+    // 4 u 6
+    // 7 8 9
+    int MapHeight = this->getHeight();
+    int MapWidth = this->getWidth();
+    if (this->getUnit(r0, c0) == nullptr || this->getUnit(r0, c0)->getType() == UNDEFINED)
+    {
+        return canAttackBlocks;
+    }
+    UnitType ut = this->getUnit(r0, c0)->getType();
+    bool sd = this->getUnit(r0, c0)->getSide();
+    switch (ut)
+    {
+    case FOOTMAN:
+    {
+        for (int i = 1; i <= 9; i++)
+        {
+            directions.push_back(make_pair(i, 1));
+        }
+        break;
+    }
+    case KNIGHT:
+    {
+        for (int i = 1; i <= 9; i++)
+        {
+            directions.push_back(make_pair(i, 1));
+        }
+        break;
+    }
+    case ARCHER:
+    {
+        for (int i = 1; i <= 9; i++)
+        {
+            directions.push_back(make_pair(i, 2));
+        }
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
+    for (auto &dir : directions)
+    {
+        int dr = ((dir.first - 1) / 3 - 1) * dir.second;
+        int dc = ((dir.first - 1) % 3 - 1) * dir.second;
+        if (dr == 0 && dc == 0)
+        {
+            continue;
+        }
+        if (r0 + dr >= MapHeight || c0 + dc >= MapWidth || r0 + dr < 0 || c0 + dc < 0)
+        {
+            continue;
+        }
+        if (this->getUnit(r0 + dr, c0 + dc) == nullptr || (this->getUnit(r0 + dr, c0 + dc)->getSide() == sd && this->getUnit(r0 + dr, c0 + dc)->getType() != UNDEFINED))
+        {
+            continue;
+        }
+        if (ut == ARCHER && this->getTerrain(r0 + dr / dir.second, c0 + dc / dir.second) == MOUNTAIN)
+        {
+            continue;
+        }
+        canAttackBlocks.push_back(make_pair(r0 + dr, c0 + dc));
+    }
+    return canAttackBlocks;
 }

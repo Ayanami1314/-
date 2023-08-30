@@ -4,7 +4,9 @@
 #include <ostream>
 #include "grid.h"
 #include "units.h"
+#include <vector>
 using std::pair;
+using std::vector;
 /* Terrains */
 enum Terrain
 {
@@ -30,11 +32,16 @@ public:
     void updateArray(pair<int, int> *mapArray, int size);
     bool canOver(int r, int c) const
     {
-        return this->terrains[r][c] != WATER && this->terrains[r][c] != MOUNTAIN && this->terrains[r][c] != ABYSS && this->terrains[r][c] != ONFIRE;
+        bool terrainFlag = this->terrains[r][c] != WATER && this->terrains[r][c] != MOUNTAIN && this->terrains[r][c] != ABYSS && this->terrains[r][c] != ONFIRE;
+        bool unitFlag = this->units[r][c] != nullptr && this->units[r][c]->getType() == UNDEFINED;
+        return terrainFlag && unitFlag;
     };
     // Constructor
     Field(int h, int w);
     bool moveUnit(int r0, int c0, int r, int c, int &remainSteps);
+    bool attack(int r0, int c0, int r, int c, int &remainSteps);
+    vector<pair<int, int>> getCanAttackBlocks(int r0, int c0);
+    vector<pair<int, int>> getCanMoveBlocks(int r0, int c0, int remainSteps);
     // Get the height and width of the field
     int getHeight() const;
     int getWidth() const;

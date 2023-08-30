@@ -94,6 +94,7 @@ clickButton *pAttackButton = new clickButton(sideBarLeftTopX + blockSize, sideBa
 clickButton *pFireBall = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize);
 clickButton *pEarthquake = new clickButton(sideBarLeftTopX + blockSize, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize);
 clickButton *pCancelButton = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 6 * blockSize, 2 * blockSize, blockSize);
+clickButton *pEndTurnButton = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 8 * blockSize, blockSize, blockSize);
 Area *pMoveStepArea = new Area(sideBarLeftTopX, sideBarLeftTopY + blockSize, 2 * blockSize, blockSize);
 class battleField : public olc::PixelGameEngine
 {
@@ -125,8 +126,8 @@ private:
         // 1 red_ft, 2 red_kn, 3 red_ar, 4 red_mg
         // -1, -2, -3, -4 blue
         // 10 plain, 11 water, 12 mountains, 13 abyss, 14 forest,  19 fire
-        // 20 fireball, 21 earthquake, 22 move_arrow, 23 choice_arrow, 24 attack
-        // combined img: forest + ...
+        // 20 fireball, 21 earthquake, 22 move_arrow, 23 choice_arrow, 24 attack, 25 cancel, 26 player_next, 27 button_click
+
         std::unique_ptr<olc::Sprite> red_knight = make_unique<olc::Sprite>("./vector_icon_resized/red-knight.png");
         std::unique_ptr<olc::Sprite> blue_knight = make_unique<olc::Sprite>("./vector_icon_resized/blue-knight.png");
         std::unique_ptr<olc::Sprite> red_archer = make_unique<olc::Sprite>("./vector_icon_resized/red-archer.png");
@@ -146,7 +147,9 @@ private:
         std::unique_ptr<olc::Sprite> move_arrow = make_unique<olc::Sprite>("./vector_icon_resized/move.png");
         std::unique_ptr<olc::Sprite> attack = make_unique<olc::Sprite>("./vector_icon_resized/knife-thrust.png");
         std::unique_ptr<olc::Sprite> map = make_unique<olc::Sprite>("./vector_icon_resized/plain-square.png");
-        std::unique_ptr<olc::Sprite> cancel = make_unique<olc::Sprite>("./vector_icon_resized/cancel.png");
+        std::unique_ptr<olc::Sprite> cancel = make_unique<olc::Sprite>("./vector_icon_resized/cancel2.png");
+        std::unique_ptr<olc::Sprite> player_next = make_unique<olc::Sprite>("./vector_icon_resized/player-next.png");
+        std::unique_ptr<olc::Sprite> button_clicked = make_unique<olc::Sprite>("./vector_icon_resized/click.png");
         //        std::unique_ptr<olc::Decal> red_knight_decal = make_unique<olc::Decal>(red_knight.get());
         //        std::unique_ptr<olc::Decal> blue_knight_decal = make_unique<olc::Decal>(blue_knight.get());
         //        std::unique_ptr<olc::Decal> red_archer_decal = make_unique<olc::Decal>(red_archer.get());
@@ -172,7 +175,7 @@ private:
         // 1 red_ft, 2 red_kn, 3 red_ar, 4 red_mg
         // -1, -2, -3, -4 blue
         // 10 plain, 11 water, 12 mountains, 14 forest, 13 abyss, 19 fire
-        // 20 fireball, 21 earthquake, 22 move_arrow, 23 choice_arrow, 24 attack
+        // 20 fireball, 21 earthquake, 22 move_arrow, 23 choice_arrow, 24 attack 25 cancel, 26 player_next, 27 button_clicked
         case 1:
             return red_footman;
         case 2:
@@ -213,6 +216,10 @@ private:
             return attack;
         case 25:
             return cancel;
+        case 26:
+            return player_next;
+        case 27:
+            return button_clicked;
         default:
             return map;
         }
@@ -247,6 +254,24 @@ public:
         moveStepArea = *pMoveStepArea;
         CreateLayer(); // create second layer
         return true;
+    }
+    void clearButtonState()
+    {
+        pMoveButton->exist = false;
+        pAttackButton->exist = false;
+        pFireBall->exist = false;
+        pEarthquake->exist = false;
+        pCancelButton->exist = false;
+        pMoveButton->clicked = false;
+        pAttackButton->clicked = false;
+        pFireBall->clicked = false;
+        pEarthquake->clicked = false;
+        pCancelButton->clicked = false;
+        pEndTurnButton->clicked = false;
+    }
+    bool hasButtonClicked()
+    {
+        return pMoveButton->clicked || pAttackButton->clicked || pFireBall->clicked || pEarthquake->clicked || pCancelButton->clicked || pEndTurnButton->clicked;
     }
     void drawDetectBox(clickButton b)
     {
@@ -289,7 +314,7 @@ public:
             }
             return false;
         };
-        return checkButton(pCancelButton) || checkButton(pAttackButton) || checkButton(pMoveButton) || checkButton(pEarthquake) || checkButton(pFireBall);
+        return checkButton(pCancelButton) || checkButton(pAttackButton) || checkButton(pMoveButton) || checkButton(pEarthquake) || checkButton(pFireBall) || checkButton(pEndTurnButton);
     }
     bool OnUserUpdate(float fElapsedTime) override
     {
@@ -305,10 +330,10 @@ public:
             int clickX = GetMouseX();
             int clickY = GetMouseY();
             DrawCircle(clickX, clickY, 5, olc::RED);
-            cout << "click pos:" << clickX << "," << clickY << endl;
-            cout << "move area" << pMoveButton->getLeftTop() << pMoveButton->getRightBottom() << endl;
-            cout << "attack in:" << pAttackButton->in(clickX, clickY) << endl;
-            cout << "move in:" << pMoveButton->in(clickX, clickY) << endl;
+            // cout << "click pos:" << clickX << "," << clickY << endl;
+            // cout << "move area" << pMoveButton->getLeftTop() << pMoveButton->getRightBottom() << endl;
+            // cout << "attack in:" << pAttackButton->in(clickX, clickY) << endl;
+            // cout << "move in:" << pMoveButton->in(clickX, clickY) << endl;
             clicked = whichBlockClicked(clickX, clickY);
         }
         // upper 2 block size: (who's turn, turn number)
@@ -321,24 +346,21 @@ public:
         if (clicked || isMapChanged(mapCache.get(), blocks.get(), MapSize * MapSize))
         {
             // only when map changed or clicked valid area rerender map
-
             Clear(olc::BLACK);
             if (clicked)
             {
+                cout << "onClick remainSteps:" << remainSteps << endl;
                 if (pCancelButton->clicked)
                 {
                     // cancel all states
-                    pFireBall->exist = false;
-                    pEarthquake->exist = false;
-                    pAttackButton->exist = false;
-                    pCancelButton->exist = false;
+                    clearButtonState();
                     for (int i = 0; i < MapSize * MapSize; ++i)
                     {
                         onClick[i] = 0;
                     }
                     lastChooseBlockIndex = -1;
                     chooseBlockIndex = -1;
-                    pCancelButton->clicked = false;
+                    pCancelButton->exist = false;
                 }
                 int no = 0;
                 for (int i = 0; i < MapSize * MapSize; ++i)
@@ -350,16 +372,44 @@ public:
                         break;
                     }
                 }
+                if (pEndTurnButton->clicked)
+                {
+                    clearButtonState();
+                    if (whosTurn == "Red")
+                    {
+                        whosTurn = "Blue";
+                        pEndTurnButton->clicked = false;
+                    }
+                    else
+                    {
+                        whosTurn = "Red";
+                        turnNumber++;
+                        pEndTurnButton->clicked = false;
+                    }
+                }
                 // render
                 DrawString(sbar.posX, sbar.posY, description(no), olc::WHITE, 2u);
-                DrawSprite(pCancelButton->posX, pCancelButton->posY, codePicMap(25).get());
+
                 characterX = chooseBlockIndex % MapSize;
                 characterY = chooseBlockIndex / MapSize;
                 if (lastChooseBlockIndex == -1)
                     remainSteps = chooseBlockIndex == -1 ? 0 : f->getUnit(characterY, characterX)->getMovePoints();
                 else
+                {
                     remainSteps = chooseBlockIndex == -1 ? f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getMovePoints() : f->getUnit(characterY, characterX)->getMovePoints();
+                }
+
                 // debug information
+                // cout << "side:" << endl;
+                // for (int k = 0; k < MapSize; k++)
+                // {
+                //     for (int p = 0; p < MapSize; ++p)
+                //     {
+
+                //         cout << f->getUnit(k, p)->getSide() << " ";
+                //     }
+                //     cout << endl;
+                // }
                 // cout << "f: units" << endl;
                 // Unit *u = new Unit(KNIGHT, true);
                 // f->setUnit(5, 5, u);
@@ -391,6 +441,7 @@ public:
                 //     cout << endl;
                 // }
                 pCancelButton->exist = true;
+                pEndTurnButton->exist = true;
                 if (no == 4 || no == -4)
                 {
                     // mage have two additional choices
@@ -412,20 +463,32 @@ public:
                 // first click attack or fireball or earthquake, then click block 2
                 if (lastChooseBlockIndex != -1 && chooseBlockIndex != -1 && lastChooseBlockIndex != chooseBlockIndex)
                 {
+                    characterX = lastChooseBlockIndex % MapSize;
+                    characterY = lastChooseBlockIndex / MapSize;
                     if (pMoveButton->clicked)
                     {
-                        // render the area can move
-                        characterX = lastChooseBlockIndex % MapSize;
-                        characterY = lastChooseBlockIndex / MapSize;
-                        // move
-                        cout << "before move: point = " << remainSteps << endl;
-                        f->moveUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize, remainSteps);
-                        cout << "before move: point = " << remainSteps << endl;
+                        bool side = f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getSide();
+                        if (side && whosTurn == "Red" || !side && whosTurn == "Blue")
+                        {
+                            // update remainSteps
+                            remainSteps = f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getMovePoints();
+                            cout << "before move: point = " << remainSteps << endl;
+                            f->moveUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize, remainSteps);
+                            cout << "after move: point = " << remainSteps << endl;
+                        }
                         pMoveButton->clicked = false;
                     }
                     else if (pAttackButton->clicked)
                     {
-                        // attack
+                        // attack consume all the rest of movePoint
+                        bool side = f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getSide();
+                        if (side && whosTurn == "Red" || !side && whosTurn == "Blue")
+                        {
+                            cout << "before attack: point = " << remainSteps << endl;
+                            f->attack(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize, remainSteps);
+                            cout << "after attack: point = " << remainSteps << endl;
+                        }
+                        pAttackButton->clicked = false;
                     }
                     else if (pFireBall->clicked)
                     {
@@ -440,15 +503,27 @@ public:
 
                 if (chooseBlockIndex != -1)
                     lastChooseBlockIndex = chooseBlockIndex;
+
+                // debug information
                 cout << "cancelButton:" << endl;
                 pCancelButton->printInfo();
                 cout << "moveButton:" << endl;
                 pMoveButton->printInfo();
                 cout << "attackButton:" << endl;
                 pAttackButton->printInfo();
+                cout << "fireBall:" << endl;
+                pFireBall->printInfo();
+                cout << "earthquake:" << endl;
+                pEarthquake->printInfo();
+                cout << "endTurnButton:" << endl;
+                pEndTurnButton->printInfo();
                 drawDetectBox(*pCancelButton);
                 drawDetectBox(*pMoveButton);
                 drawDetectBox(*pAttackButton);
+                drawDetectBox(*pFireBall);
+                drawDetectBox(*pEarthquake);
+                drawDetectBox(*pEndTurnButton);
+
                 // drawDetectBox(fireBall);
                 // drawDetectBox(earthquake);
                 // cout<< "fireBall:"<<endl;
@@ -479,14 +554,23 @@ public:
             if (lastChooseBlockIndex != -1)
                 DrawSprite(olc::vi2d(lastChooseBlockIndex % MapSize, lastChooseBlockIndex / MapSize + 2) * blockSize, codePicMap(23).get());
             // layer 2(if exist)
+            int renderChooseIndex = chooseBlockIndex != -1 ? chooseBlockIndex : lastChooseBlockIndex;
+            int render_X = renderChooseIndex % MapSize;
+            int render_Y = renderChooseIndex / MapSize;
             bool flag = (chooseBlockIndex != -1 && isCharacter(blocks[chooseBlockIndex].second)) || (lastChooseBlockIndex != -1 && isCharacter(blocks[lastChooseBlockIndex].second));
-            if (chooseBlockIndex != -1 || lastChooseBlockIndex != -1 && flag)
+            if (flag)
+            {
+                bool sd = f->getUnit(render_Y, render_X)->getSide();
+                if (sd && whosTurn != "Red" || !sd && whosTurn != "Blue")
+                {
+                    flag = false;
+                }
+            }
+            if (flag && (chooseBlockIndex != -1 || lastChooseBlockIndex != -1))
             {
                 // choose picture
                 // draw in picture 1
-                int renderChooseIndex = chooseBlockIndex != -1 ? chooseBlockIndex : lastChooseBlockIndex;
-                int render_X = renderChooseIndex % MapSize;
-                int render_Y = renderChooseIndex / MapSize;
+
                 // row: Y, col:X
                 int MovePoints = remainSteps;
                 std::cout << f->getUnit(render_Y, render_X)->getType() << endl;
@@ -494,34 +578,59 @@ public:
                 // int start_j = max(0, render_Y - MovePoints);
                 // int end_i = min(MapSize - 1, render_X + MovePoints);
                 // int end_j = min(MapSize - 1, render_Y + MovePoints);
-                olc::Pixel p_alpha_yellow = olc::YELLOW;
-                p_alpha_yellow.a = 128;
                 // SetPixelMode(olc::Pixel::ALPHA);
                 // SetLayerTint(1, olc::Pixel(0, 0, 0, 128)); // clear layer 1
                 // secondLayer is layer 1, first is 0;
                 // SetDrawTarget(1); // draw to layer 1
-
                 cout << "render center:(row, col) = " << olc::vi2d(render_Y, render_X) << endl;
-                for (int i = 0; i < MapSize; i++) // i, x, col
+                vector<pair<int, int>> renderBlocks_Move;
+                vector<pair<int, int>> renderBlocks_Attack;
+                cout << "remainSteps(in render) = " << remainSteps << endl;
+                renderBlocks_Move = f->getCanMoveBlocks(render_Y, render_X, remainSteps); // (r, c)
+                renderBlocks_Attack = f->getCanAttackBlocks(render_Y, render_X);          // (r, c)
+                if (!pAttackButton->clicked)
                 {
-                    for (int j = 0; j < MapSize; j++) // j, y, row
+                    // normal cases it should be rendered
+                    olc::Pixel p_alpha_yellow = olc::YELLOW;
+                    p_alpha_yellow.a = 128;
+                    for (auto &rb : renderBlocks_Move)
                     {
-                        pair<int, int> typecode = blocks[i + j * MapSize];
-                        if (m_dis(render_X, render_Y, i, j) <= MovePoints && f->canOver(j, i) && !isCharacter(typecode.second))
-                        {
-                            // isn't unreachable area and other unit
-                            cout << "render! (" << i << "," << j << " )" << endl;
-                            FillRect(i * blockSize, (j + 2) * blockSize, blockSize, blockSize, p_alpha_yellow);
-                        }
+                        cout << "render! (" << rb.first << "," << rb.second << " )" << endl;
+                        FillRect(rb.second * blockSize, (rb.first + 2) * blockSize, blockSize, blockSize, p_alpha_yellow);
+                    }
+                }
+                if (pAttackButton->clicked)
+                {
+                    olc::Pixel p_alpha_red = olc::RED;
+                    p_alpha_red.a = 128;
+                    for (auto &rb : renderBlocks_Attack)
+                    {
+                        cout << "render! (" << rb.first << "," << rb.second << " )" << endl; // (r, c)
+                        // FillRect(x, y)  (x, y) == (c, r)
+                        FillRect(rb.second * blockSize, (rb.first + 2) * blockSize, blockSize, blockSize, p_alpha_red);
                     }
                 }
                 // SetDrawTarget(0, true); // draw to layer 0, return
                 // EnableLayer(1, true);
             }
             // render sidebar
-
+            auto renderSideBarChoose = [&](clickButton *pb)
+            {
+                if (pb->clicked)
+                {
+                    SetDrawTarget(1, true);
+                    olc::Pixel choosePixel = olc::GREEN;
+                    choosePixel.a = 128;
+                    FillRect(pb->posX, pb->posY, pb->width, pb->height, choosePixel);
+                    SetDrawTarget(0, false);
+                }
+                return;
+            };
+            renderSideBarChoose(pMoveButton);
+            renderSideBarChoose(pAttackButton);
+            renderSideBarChoose(pFireBall);
+            renderSideBarChoose(pEarthquake);
             DrawString(moveStepArea.posX, moveStepArea.posY, "MovePoints:" + to_string(remainSteps), olc::WHITE, 2u);
-            DrawString(moveStepArea.posX, moveStepArea.posY + 9 * blockSize, "UnitType" + (characterX == -1 || characterY == -1) ? "UNDEFINED" : to_string(f->getUnit(characterY, characterX)->getType()), olc::WHITE, 2u);
             DrawString(moveStepArea.posX, moveStepArea.posY + 10 * blockSize, "LastChoose:(i,j)=" + to_string(lastChooseBlockIndex / MapSize) + "," + to_string(lastChooseBlockIndex % MapSize), olc::WHITE, 2u);
             DrawString(moveStepArea.posX, moveStepArea.posY + 11 * blockSize, "currentChoose:(i,j)=" + to_string(chooseBlockIndex / MapSize) + "," + to_string(chooseBlockIndex % MapSize), olc::WHITE, 2u);
             if (pFireBall->exist)
@@ -532,6 +641,8 @@ public:
                 DrawSprite(pMoveButton->posX, pMoveButton->posY, codePicMap(22).get()); // move
             if (pAttackButton->exist)
                 DrawSprite(pAttackButton->posX, pAttackButton->posY, codePicMap(24).get()); // attack
+            DrawSprite(pCancelButton->posX, pCancelButton->posY, codePicMap(25).get());
+            DrawSprite(pEndTurnButton->posX, pEndTurnButton->posY, codePicMap(26).get());
             arrayCopy(blocks.get(), mapCache.get(), MapSize * MapSize);
             // f->loadmap_array(blocks.get(), MapSize);  It should be array load field, instead of field load array
         }
