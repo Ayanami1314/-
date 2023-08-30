@@ -31,6 +31,7 @@ public:
             break;
         case MAGE:
             this->MovePoints = 2;
+            this->magicNumber = 1;
             break;
         default:
             this->MovePoints = 0;
@@ -39,13 +40,17 @@ public:
     }
     Unit(UnitType u, bool sd, int mp) : type(u), side(sd), MovePoints(mp)
     {
-        ;
+        if (u == MAGE)
+        {
+            this->magicNumber = 1;
+        }
     }
     Unit(const Unit &u)
     {
         type = u.type;
         side = u.side;
         MovePoints = u.MovePoints;
+        magicNumber = u.magicNumber;
     }
     Unit()
     {
@@ -73,6 +78,14 @@ public:
     void setMovePoints(int mp)
     {
         MovePoints = mp;
+    }
+    int getMagicNumber()
+    {
+        return this->magicNumber;
+    }
+    void setMagicNumber(int mn)
+    {
+        magicNumber = mn;
     }
     void setMovePointsByType(UnitType ut)
     {
@@ -104,6 +117,7 @@ private:
     UnitType type;
     bool side;
     int MovePoints;
+    int magicNumber = 0;
 };
 
 #endif // UNITS_H_INCLUDED

@@ -34,6 +34,26 @@ inline int getMoveSteps(UnitType ut)
     }
     return 0;
 }
+inline int getFuzzyFourdirection(int r0, int c0, int r, int c)
+{
+    // 1 2 3
+    // 4 5 6
+    // 7 8 9
+    // left: 4, right:6, up: 2, down: 8
+    // x:col, y:row, return xy direction
+    int dr = r - r0;
+    int dc = c - c0;
+    bool rowBigger = abs(dr) > abs(dc);
+    if (rowBigger && dr > 0)
+        return 8;
+    if (rowBigger && dr < 0)
+        return 2;
+    if (!rowBigger && dc > 0)
+        return 6;
+    if (!rowBigger && dc < 0)
+        return 4;
+    return 5;
+}
 // template <typename T, typename... Args>
 // void log(T first, Args... args)
 // {

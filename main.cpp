@@ -84,11 +84,13 @@ struct sideBar
 };
 const int MapWidth = 450;
 const int MapHeight = 450;
-const int MapSize = 9;
-const int blockSize = MapWidth / MapSize;
+
+const int blockSize = 50;
+const int MapSize = MapWidth / blockSize; // 9
 Field *f = new Field(MapSize, MapSize);
 int sideBarLeftTopX = MapSize * blockSize * 32 / 30;
 int sideBarLeftTopY = blockSize;
+
 clickButton *pMoveButton = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize);
 clickButton *pAttackButton = new clickButton(sideBarLeftTopX + blockSize, sideBarLeftTopY + 2 * blockSize, blockSize, blockSize);
 clickButton *pFireBall = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 4 * blockSize, blockSize, blockSize);
@@ -96,6 +98,7 @@ clickButton *pEarthquake = new clickButton(sideBarLeftTopX + blockSize, sideBarL
 clickButton *pCancelButton = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 6 * blockSize, 2 * blockSize, blockSize);
 clickButton *pEndTurnButton = new clickButton(sideBarLeftTopX, sideBarLeftTopY + 8 * blockSize, blockSize, blockSize);
 Area *pMoveStepArea = new Area(sideBarLeftTopX, sideBarLeftTopY + blockSize, 2 * blockSize, blockSize);
+Area *hintArea = new Area(sideBarLeftTopX, sideBarLeftTopY + 10 * blockSize, 2 * blockSize, blockSize);
 class battleField : public olc::PixelGameEngine
 {
 private:
@@ -384,6 +387,8 @@ public:
                     {
                         whosTurn = "Red";
                         turnNumber++;
+                        f->refreshTheState();
+                        f->burnOut();
                         pEndTurnButton->clicked = false;
                     }
                 }
@@ -398,7 +403,11 @@ public:
                 {
                     remainSteps = chooseBlockIndex == -1 ? f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getMovePoints() : f->getUnit(characterY, characterX)->getMovePoints();
                 }
-
+                // debug information
+                // if (lastChooseBlockIndex != -1 && f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getType() == MAGE)
+                // {
+                //     cout << "MagicNumber: " << f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getMagicNumber() << endl;
+                // }
                 // debug information
                 // cout << "side:" << endl;
                 // for (int k = 0; k < MapSize; k++)
@@ -493,10 +502,28 @@ public:
                     else if (pFireBall->clicked)
                     {
                         // fireball
+                        int direction = getFuzzyFourdirection(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize);
+                        int magicNumber = f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getMagicNumber();
+                        if (direction != 5 && magicNumber > 0)
+                        {
+                            createFireBall(f, lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, direction);
+                            pFireBall->clicked = false;
+                            f->setUnitMagicNumber(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, --magicNumber);
+                        }
+                        DrawString(hintArea->posX, hintArea->posY, "MagicNumber:" + to_string(magicNumber), olc::WHITE, 2u);
                     }
                     else if (pEarthquake->clicked)
                     {
                         // earthquake
+                        int direction = getFuzzyFourdirection(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, chooseBlockIndex / MapSize, chooseBlockIndex % MapSize);
+                        int magicNumber = f->getUnit(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize)->getMagicNumber();
+                        if (direction != 5 && magicNumber > 0)
+                        {
+                            createEarthquake(f, lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, direction);
+                            pEarthquake->clicked = false;
+                            f->setUnitMagicNumber(lastChooseBlockIndex / MapSize, lastChooseBlockIndex % MapSize, --magicNumber);
+                        }
+                        DrawString(hintArea->posX, hintArea->posY, "MagicNumber:" + to_string(magicNumber), olc::WHITE, 2u);
                     }
                     f->updateArray(blocks.get(), MapSize);
                 }
@@ -524,12 +551,12 @@ public:
                 drawDetectBox(*pEarthquake);
                 drawDetectBox(*pEndTurnButton);
 
-                // drawDetectBox(fireBall);
-                // drawDetectBox(earthquake);
-                // cout<< "fireBall:"<<endl;
-                // fireBall.printInfo();
-                // cout<< "earthquake:"<<endl;
-                // earthquake.printInfo();
+                drawDetectBox(*pFireBall);
+                drawDetectBox(*pEarthquake);
+                cout << "fireBall:" << endl;
+                pFireBall->printInfo();
+                cout << "earthquake:" << endl;
+                pEarthquake->printInfo();
 
                 // clear onClick
                 for (int i = 0; i < MapSize * MapSize; ++i)
@@ -583,11 +610,11 @@ public:
                 // secondLayer is layer 1, first is 0;
                 // SetDrawTarget(1); // draw to layer 1
                 cout << "render center:(row, col) = " << olc::vi2d(render_Y, render_X) << endl;
-                vector<pair<int, int>> renderBlocks_Move;
-                vector<pair<int, int>> renderBlocks_Attack;
                 cout << "remainSteps(in render) = " << remainSteps << endl;
-                renderBlocks_Move = f->getCanMoveBlocks(render_Y, render_X, remainSteps); // (r, c)
-                renderBlocks_Attack = f->getCanAttackBlocks(render_Y, render_X);          // (r, c)
+                vector<pair<int, int>> renderBlocks_Move = f->getCanMoveBlocks(render_Y, render_X, remainSteps); // (r, c)
+                vector<pair<int, int>> renderBlocks_Attack = f->getCanAttackBlocks(render_Y, render_X);          // (r, c)
+                vector<pair<int, int>> renderBlocks_Fireball = f->getFireBallBlocks(render_Y, render_X);         // (r, c)
+                vector<pair<int, int>> renderBlocks_Earthquake = f->getEarthquakeBlocks(render_Y, render_X);     // (r, c)
                 if (!pAttackButton->clicked)
                 {
                     // normal cases it should be rendered
@@ -610,6 +637,28 @@ public:
                         FillRect(rb.second * blockSize, (rb.first + 2) * blockSize, blockSize, blockSize, p_alpha_red);
                     }
                 }
+                if (pFireBall->clicked)
+                {
+                    olc::Pixel p_alpha_red = olc::RED;
+                    p_alpha_red.a = 128;
+                    for (auto &rb : renderBlocks_Fireball)
+                    {
+                        cout << "render! (" << rb.first << "," << rb.second << " )" << endl; // (r, c)
+                        // FillRect(x, y)  (x, y) == (c, r)
+                        FillRect(rb.second * blockSize, (rb.first + 2) * blockSize, blockSize, blockSize, p_alpha_red);
+                    }
+                }
+                if (pEarthquake->clicked)
+                {
+                    olc::Pixel p_alpha_red = olc::RED;
+                    p_alpha_red.a = 128;
+                    for (auto &rb : renderBlocks_Earthquake)
+                    {
+                        cout << "render! (" << rb.first << "," << rb.second << " )" << endl; // (r, c)
+                        // FillRect(x, y)  (x, y) == (c, r)
+                        FillRect(rb.second * blockSize, (rb.first + 2) * blockSize, blockSize, blockSize, p_alpha_red);
+                    }
+                }
                 // SetDrawTarget(0, true); // draw to layer 0, return
                 // EnableLayer(1, true);
             }
@@ -623,6 +672,7 @@ public:
                     choosePixel.a = 128;
                     FillRect(pb->posX, pb->posY, pb->width, pb->height, choosePixel);
                     SetDrawTarget(0, false);
+                    EnableLayer(1, true);
                 }
                 return;
             };

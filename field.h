@@ -29,6 +29,20 @@ public:
     friend void createFireBall(Field *f, int r, int c, int d);
     friend void createEarthquake(Field *f, int r, int c, int d);
     friend void Flow(Field *f);
+    void refreshTheState(); // new turn
+    void burnOut()
+    {
+        for (int i = 0; i < this->getHeight(); i++)
+        {
+            for (int j = 0; j < this->getWidth(); j++)
+            {
+                if (this->terrains[i][j] == ONFIRE)
+                {
+                    this->terrains[i][j] = PLAIN;
+                }
+            }
+        }
+    }
     void updateArray(pair<int, int> *mapArray, int size);
     bool canOver(int r, int c) const
     {
@@ -42,6 +56,8 @@ public:
     bool attack(int r0, int c0, int r, int c, int &remainSteps);
     vector<pair<int, int>> getCanAttackBlocks(int r0, int c0);
     vector<pair<int, int>> getCanMoveBlocks(int r0, int c0, int remainSteps);
+    vector<pair<int, int>> getFireBallBlocks(int r0, int c0);
+    vector<pair<int, int>> getEarthquakeBlocks(int r0, int c0);
     // Get the height and width of the field
     int getHeight() const;
     int getWidth() const;
@@ -83,6 +99,7 @@ public:
     {
         units[r][c] = u;
     }
+    void setUnitMagicNumber(int r, int c, int magicNumber);
     Unit *getUnit(int row, int col) const;
     bool inBounds(int row, int col) const;
     // Destructor

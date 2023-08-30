@@ -234,8 +234,10 @@ void createFireBall(Field *f, int r, int c, int d)
                     q.push(edgePoint);
                     // fire
                     visited[edgePoint.first][edgePoint.second] = 1;
-                    f->getUnit(edgePoint.first, edgePoint.second)->setType(UNDEFINED);
+                    f->setUnit(edgePoint.first, edgePoint.second, UNDEFINED, true);
                     f->onFire(edgePoint.first, edgePoint.second);
+                    cout << "(" << edgePoint.first << "," << edgePoint.second << ")"
+                         << " on fire!" << endl;
                 }
                 q.pop();
             }
@@ -245,6 +247,7 @@ void createFireBall(Field *f, int r, int c, int d)
             f->getUnit(fbx, fby)->setType(UNDEFINED);
             existFireBall = false;
         }
+        cout << "fireball (x, y): " << fbx << "," << fby << endl;
         fbx += dx;
         fby += dy;
     }
@@ -273,7 +276,7 @@ void createEarthquake(Field *f, int r, int c, int d)
         if (f->terrains[edge_x][edge_y] == FOREST || f->terrains[edge_x][edge_y] == PLAIN)
         {
             f->setTerrain(edge_x, edge_y, ABYSS);
-            f->getUnit(edge_x, edge_y)->setType(UNDEFINED);
+            f->setUnit(edge_x, edge_y, UNDEFINED, true);
         }
         if (f->terrains[edge_x][edge_y] == MOUNTAIN)
         {

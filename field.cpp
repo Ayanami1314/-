@@ -161,9 +161,8 @@ ostream &operator<<(ostream &os, const Field &field)
 }
 bool Field::moveUnit(int r0, int c0, int r, int c, int &remainSteps)
 {
-
     Unit *u = this->getUnit(r0, c0);
-    if (r < 0 || r >= this->getHeight() || c < 0 || c >= this->getWidth())
+    if (r < 0 || r >= this->getHeight() || c < 0 || c >= this->getWidth() || u == nullptr)
         return false;
     if (this->getUnit(r, c)->getType() != UNDEFINED)
         return false;
@@ -199,29 +198,34 @@ bool Field::moveUnit(int r0, int c0, int r, int c, int &remainSteps)
             break;
         }
     }
-    cout << "distance" << endl;
-    for (int i = 0; i < this->getHeight(); i++)
-    {
-        for (int j = 0; j < this->getWidth(); j++)
-        {
-            if (distance[i][j] == INF)
-            {
-                cout << "I ";
-            }
-            else
-            {
-                cout << distance[i][j] << " ";
-            }
-        }
-        cout << endl;
-    }
+    // cout << "distance" << endl;
+    // for (int i = 0; i < this->getHeight(); i++)
+    // {
+    //     for (int j = 0; j < this->getWidth(); j++)
+    //     {
+    //         if (distance[i][j] == INF)
+    //         {
+    //             cout << "I ";
+    //         }
+    //         else
+    //         {
+    //             cout << distance[i][j] << " ";
+    //         }
+    //     }
+    //     cout << endl;
+    // }
     if (remainSteps < distance[r][c])
     {
         cout << "can't move!" << endl;
         return false;
     }
+    if (u->getType() == MAGE)
+    {
+        this->setUnitMagicNumber(r, c, u->getMagicNumber());
+    }
     this->setUnit(r, c, u->getType(), u->getSide(), u->getMovePoints() - distance[r][c]);
     this->setUnit(r0, c0, UNDEFINED, false);
+
     remainSteps -= distance[r][c];
     return true;
 }
@@ -296,6 +300,7 @@ void Field::loadmap_array(pair<int, int> *map, int mapSize)
                 break;
             case 4:
                 this->setUnit(i, j, MAGE, true);
+                this->setUnitMagicNumber(i, j, 1);
                 break;
             case -1:
                 this->setUnit(i, j, FOOTMAN, false);
@@ -503,4 +508,77 @@ vector<pair<int, int>> Field::getCanAttackBlocks(int r0, int c0)
         canAttackBlocks.push_back(make_pair(r0 + dr, c0 + dc));
     }
     return canAttackBlocks;
+}
+vector<pair<int, int>> Field::getFireBallBlocks(int r0, int c0)
+{
+    vector<pair<int, int>> FireballBlocks;
+    int directions[4][2] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+    for (int i = 0; i < 4; ++i)
+    {
+        pair<int, int> loc = make_pair(r0 + directions[i][0], c0 + directions[i][1]);
+        if (loc.first >= 0 && loc.first < this->getHeight() && loc.second >= 0 && loc.second < this->getWidth())
+        {
+            FireballBlocks.push_back(loc);
+        }
+    }
+    return FireballBlocks;
+}
+vector<pair<int, int>> Field::getEarthquakeBlocks(int r0, int c0)
+{
+    vector<pair<int, int>> EarthquakeBlocks;
+    int directions[5][2] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}, {0, 0}};
+    const int gap_distance = 3;
+    for (int i = 0; i < 4; ++i)
+    {
+        for (int j = 0; j < 5; ++j)
+        {
+            int dc = directions[j][1];
+            int dr = directions[j][0];
+            pair<int, int> loc = make_pair(r0 + directions[i][0] * gap_distance + dr, c0 + directions[i][1] * gap_distance + dc);
+            if (loc.first >= 0 && loc.first < this->getHeight() && loc.second >= 0 && loc.second < this->getWidth())
+            {
+                EarthquakeBlocks.push_back(loc);
+            }
+        }
+    }
+    return EarthquakeBlocks;
+}
+void Field::setUnitMagicNumber(int r, int c, int magicNumber)
+{
+    if (!this->inBounds(r, c))
+    {
+        cout << "setUnitMagicNumber: out of bounds!!!" << endl;
+        return;
+    }
+    assert(this->units[r][c] != nullptr);
+    this->units[r][c]->setMagicNumber(magicNumber);
+}
+void Field::refreshTheState()
+{
+    for (int i = 0; i < this->getHeight(); i++)
+    {
+        for (int j = 0; j < this->getWidth(); j++)
+        {
+            Unit *u = this->units[i][j];
+            if (this->units[i][j] != nullptr)
+            {
+                int movePointResetFlag = 1;
+                switch (u->getType())
+                {
+                case MAGE:
+                    u->setMagicNumber(1);
+                    break;
+                case UNDEFINED:
+                    movePointResetFlag = 0;
+                    break;
+                default:
+                    break;
+                }
+                if (movePointResetFlag)
+                {
+                    u->setMovePointsByType(u->getType());
+                }
+            }
+        }
+    }
 }
